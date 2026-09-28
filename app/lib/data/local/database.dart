@@ -13,7 +13,8 @@ class AppDatabase {
   static Future<AppDatabase> open() async {
     final dir = await getApplicationDocumentsDirectory();
     // 演示模式单独一个库：演示版升级到正式版时，假网盘里的书不会混进真书架
-    final name = AppConfig.demoMode ? 'yun_audiobook_demo.db' : 'yun_audiobook.db';
+    const name =
+        AppConfig.demoMode ? 'yun_audiobook_demo.db' : 'yun_audiobook.db';
     return openWith(databaseFactory, p.join(dir.path, name));
   }
 
