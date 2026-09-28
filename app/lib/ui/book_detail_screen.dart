@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/services.dart';
 import '../domain/models.dart';
 import 'player_screen.dart';
+import 'start_playback.dart';
 import 'widgets/book_cover.dart';
 import 'widgets/format.dart';
 
@@ -21,6 +22,7 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   bool _reordering = false;
+  bool _refreshing = false;
   bool _autoRefreshed = false;
 
   /// 从网盘同步回来的书只有元数据和进度，章节要重新从网盘解析。
@@ -32,6 +34,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       await ref.read(servicesProvider).library.refreshBook(book);
     } finally {
       if (mounted) {
+        ref.invalidate(bookProvider(book.id));
         ref.invalidate(chaptersProvider(book.id));
         // 书架读的是 books.chapter_count，补扫把它从 0 改成了真实章节数，
         // 不刷新的话退回书架还显示「章节待解析」，得手动下拉一次才对。
@@ -43,20 +46,21 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final services = ref.watch(servicesProvider);
     final chapters = ref.watch(chaptersProvider(widget.bookId));
 
-    return FutureBuilder<Book?>(
-      future: services.dao.bookById(widget.bookId),
-      builder: (context, snap) {
-        final book = snap.data;
+    // 书用 provider 取：build 里直接查库会每次重建都重查，
+    // 从播放页回来时当前章的高亮也不会跟着变（openPlayer 退回时会刷新它）
+    return Builder(
+      builder: (context) {
+        final book = ref.watch(bookProvider(widget.bookId)).valueOrNull;
         if (book == null) {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
         return Scaffold(
           appBar: AppBar(
-            title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title:
+                Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
             actions: [
               IconButton(
                 tooltip: _reordering ? '完成排序' : '手动排序',
@@ -83,7 +87,9 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               return Column(
                 children: [
                   _Header(book: book, chapters: list),
-                  const Divider(height: 1),
+                  _refreshing
+                      ? const LinearProgressIndicator(minHeight: 1)
+                      : const Divider(height: 1),
                   Expanded(
                     child: _reordering
                         ? _ReorderableChapters(book: book, chapters: list)
@@ -107,16 +113,25 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         await _editBook(book);
         break;
       case 'refresh':
-        await services.library.refreshBook(book);
+        // 刷新要重新列一遍网盘目录，慢的时候好几秒，得让人看到在干活
+        setState(() => _refreshing = true);
+        try {
+          await services.library.refreshBook(book);
+          messenger.showSnackBar(const SnackBar(content: Text('章节已刷新')));
+        } catch (_) {
+          messenger.showSnackBar(const SnackBar(content: Text('刷新失败，请稍后重试')));
+        } finally {
+          if (mounted) setState(() => _refreshing = false);
+        }
+        ref.invalidate(bookProvider(book.id));
         ref.invalidate(chaptersProvider(book.id));
         ref.invalidate(shelfProvider);
-        messenger.showSnackBar(const SnackBar(content: Text('章节已刷新')));
         break;
       case 'download':
         final list = await services.library.chapters(book.id);
         await services.downloads.enqueueBook(list);
-        messenger.showSnackBar(
-            SnackBar(content: Text('已加入下载队列（${list.length} 章）')));
+        messenger
+            .showSnackBar(SnackBar(content: Text('已加入下载队列（${list.length} 章）')));
         break;
       case 'clear':
         await services.downloads.clearBookCache(book.id);
@@ -191,11 +206,12 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     await ref.read(servicesProvider).library.editBook(
           book,
           title: titleCtrl.text.trim().isEmpty ? null : titleCtrl.text.trim(),
-          author: authorCtrl.text.trim().isEmpty ? null : authorCtrl.text.trim(),
+          author:
+              authorCtrl.text.trim().isEmpty ? null : authorCtrl.text.trim(),
         );
     ref.read(servicesProvider).sync.markDirty();
     ref.invalidate(shelfProvider);
-    if (mounted) setState(() {});
+    ref.invalidate(bookProvider(book.id));
   }
 }
 
@@ -266,6 +282,13 @@ class _ChapterList extends ConsumerStatefulWidget {
 
 class _ChapterListState extends ConsumerState<_ChapterList> {
   late List<Chapter> _chapters = [...widget.chapters];
+
+  /// 打开就落在当前章附近：几十章的书，让人每次从第一章往下翻毫无道理。
+  /// 行高不固定（标题可能两行），按单行估算，偏差几十像素无所谓。
+  late final _scroll = ScrollController(
+    initialScrollOffset: ((widget.book.currentChapterIndex - 2) * 72.0)
+        .clamp(0.0, double.infinity),
+  );
   StreamSubscription<Chapter>? _sub;
 
   Book get book => widget.book;
@@ -294,6 +317,7 @@ class _ChapterListState extends ConsumerState<_ChapterList> {
   @override
   void dispose() {
     _sub?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -302,6 +326,7 @@ class _ChapterListState extends ConsumerState<_ChapterList> {
     final chapters = _chapters;
 
     return ListView.builder(
+        controller: _scroll,
         itemCount: chapters.length,
         itemBuilder: (context, i) {
           final c = chapters[i];
@@ -319,8 +344,7 @@ class _ChapterListState extends ConsumerState<_ChapterList> {
                         : null,
                   )),
             ),
-            title: Text(c.title,
-                maxLines: 2, overflow: TextOverflow.ellipsis),
+            title: Text(c.title, maxLines: 2, overflow: TextOverflow.ellipsis),
             subtitle: Text(_subtitle(c)),
             trailing: _trailing(context, ref, c),
             onTap: () => _play(context, ref, i),
@@ -370,12 +394,22 @@ class _ChapterListState extends ConsumerState<_ChapterList> {
   }
 
   Future<void> _play(BuildContext context, WidgetRef ref, int index) async {
-    final services = ref.read(servicesProvider);
-    await services.handler.openBook(book, _chapters, chapterIndex: index);
-    await services.handler.play();
-    if (!context.mounted) return;
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
+    // 点的正是在播的那一章：直接回播放页，别重新加载把位置冲回断点
+    final handler = ref.read(servicesProvider).handler;
+    if (handler.currentBook?.id == book.id &&
+        handler.currentIndex == index &&
+        handler.mediaItem.valueOrNull != null) {
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
+      return;
+    }
+    // 点当前章就从断点接着听，点别的章从头开始
+    final resume = index == book.currentChapterIndex && !book.finished;
+    await openPlayer(context, ref, book, _chapters,
+        chapterIndex: index,
+        position: resume
+            ? Duration(milliseconds: book.currentPositionMs)
+            : Duration.zero);
   }
 }
 
@@ -413,8 +447,8 @@ class _ReorderableChaptersState extends ConsumerState<_ReorderableChapters> {
       itemBuilder: (context, i) => ListTile(
         key: ValueKey(_items[i].id),
         leading: const Icon(Icons.drag_handle),
-        title: Text(_items[i].title,
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+        title:
+            Text(_items[i].title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(_items[i].fileName,
             maxLines: 1, overflow: TextOverflow.ellipsis),
       ),

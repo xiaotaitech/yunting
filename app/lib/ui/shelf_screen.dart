@@ -7,6 +7,7 @@ import '../domain/models.dart';
 import 'book_detail_screen.dart';
 import 'browse_screen.dart';
 import 'player_screen.dart';
+import 'start_playback.dart';
 import 'widgets/book_cover.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/format.dart';
@@ -26,25 +27,7 @@ class ShelfScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('书架'),
-        actions: [
-          IconButton(
-            tooltip: '同步',
-            icon: const Icon(Icons.sync),
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final ok = await ref.read(servicesProvider).sync.syncNow();
-              // 用 refresh(...future) 而不是 invalidate：前者会强制重算并等到
-              // 新结果出来，后者只是标记失效。同步的重点恰恰是「拉回了新东西」，
-              // 实测 invalidate 之后书架没刷新，得切一次标签页才显示出来。
-              final books = await ref.refresh(shelfProvider.future);
-              messenger.showSnackBar(SnackBar(
-                content: Text(ok
-                    ? '同步完成，书架 ${books.length} 本'
-                    : '同步失败，稍后会自动重试'),
-              ));
-            },
-          ),
-        ],
+        actions: const [_SyncButton()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -58,11 +41,14 @@ class ShelfScreen extends ConsumerWidget {
       ),
       body: shelf.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(message: '$e', onRetry: () => ref.invalidate(shelfProvider)),
+        error: (e, _) => _ErrorView(
+            message: '$e', onRetry: () => ref.invalidate(shelfProvider)),
         data: (books) => books.isEmpty
             ? const _EmptyShelf()
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(shelfProvider),
+                // 等新数据回来再收起转圈；原来只 invalidate 不等，
+                // 下拉的圈一闪就没了，看不出刷没刷
+                onRefresh: () => ref.refresh(shelfProvider.future),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
                   children: [
@@ -96,8 +82,8 @@ class ContinueListeningCard extends ConsumerWidget {
     //
     // 流的首帧到达前先用同步快照兜底，免得卡片闪一下再消失。
     final handler = ref.watch(servicesProvider).handler;
-    final nowPlaying =
-        ref.watch(nowPlayingProvider).valueOrNull ?? handler.mediaItem.valueOrNull;
+    final nowPlaying = ref.watch(nowPlayingProvider).valueOrNull ??
+        handler.mediaItem.valueOrNull;
     if (nowPlaying != null) return const SizedBox.shrink();
 
     final entry = ref.watch(continueListeningProvider);
@@ -202,8 +188,8 @@ class _ContinueCard extends ConsumerWidget {
                           child: LinearProgressIndicator(
                             value: progress,
                             minHeight: 5,
-                            backgroundColor: theme.colorScheme
-                                .onPrimaryContainer
+                            backgroundColor: theme
+                                .colorScheme.onPrimaryContainer
                                 .withValues(alpha: 0.15),
                           ),
                         ),
@@ -306,14 +292,10 @@ Future<void> startListening(
     return;
   }
 
-  await services.handler.openBook(book, chapters);
-  await services.handler.play();
   if (!context.mounted) return;
-  await navigator.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
-
-  // 从播放页退回来时才刷。不能在 push 之前刷：last_played_at 由每 5 秒一次的
-  // 进度上报写入，刚 play() 完那一刻库里还是上一本书的时刻，卡片会纹丝不动。
-  if (context.mounted) ref.invalidate(shelfProvider);
+  // 书架在播放页退回来时才刷（openPlayer 里）：last_played_at 由每 5 秒一次的
+  // 进度上报写入，刚开始播那一刻库里还是上一本书的时刻，卡片会纹丝不动。
+  await openPlayer(context, ref, book, chapters);
 }
 
 class _BookTile extends ConsumerWidget {
@@ -324,9 +306,21 @@ class _BookTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final progress = book.chapterCount == 0
+    // 正在播的这本按播放器的实时章节显示：库里的进度每 5 秒才写一次，
+    // 自动续到下一章后书架还停在上一章，和底下的播放条对不上
+    final extras = ref.watch(nowPlayingProvider).valueOrNull?.extras;
+    final int? liveIndex = extras != null && extras['bookId'] == book.id
+        ? extras['chapterIndex'] as int?
+        : null;
+    final chapterIndex = liveIndex ?? book.currentChapterIndex;
+    // 一次都没播过的书：原来显示成「第 1 / 3 章 · 33%」，像是听过了
+    final notStarted = liveIndex == null &&
+        book.lastPlayedAt == null &&
+        book.currentChapterIndex == 0 &&
+        book.currentPositionMs == 0;
+    final progress = book.chapterCount == 0 || notStarted
         ? 0.0
-        : (book.currentChapterIndex + 1) / book.chapterCount;
+        : (chapterIndex + 1) / book.chapterCount;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -369,9 +363,11 @@ class _BookTile extends ConsumerWidget {
                             // 这时「已听至第 1 章 / 共 0 章」是自相矛盾的。
                             book.chapterCount == 0
                                 ? '章节待解析'
-                                : book.finished
+                                : book.finished && liveIndex == null
                                     ? '已听完 · 共 ${book.chapterCount} 章'
-                                    : '第 ${book.currentChapterIndex + 1} / ${book.chapterCount} 章',
+                                    : notStarted
+                                        ? '未开始 · 共 ${book.chapterCount} 章'
+                                        : '第 ${chapterIndex + 1} / ${book.chapterCount} 章',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall
@@ -380,7 +376,7 @@ class _BookTile extends ConsumerWidget {
                         ),
                         // 光有进度条读不出「听到哪了」，补一个百分比。
                         // 等宽数字，免得百分比变化时这一行左右抖。
-                        if (book.chapterCount > 0)
+                        if (book.chapterCount > 0 && !notStarted)
                           Text('${(progress * 100).round()}%',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.hintColor,
@@ -430,6 +426,51 @@ class _BookTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 书架右上角的同步按钮。同步要走网盘，慢的时候好几秒：
+/// 进行中换成转圈并禁用，免得连点出好几次同步、以为没反应。
+class _SyncButton extends ConsumerStatefulWidget {
+  const _SyncButton();
+
+  @override
+  ConsumerState<_SyncButton> createState() => _SyncButtonState();
+}
+
+class _SyncButtonState extends ConsumerState<_SyncButton> {
+  bool _syncing = false;
+
+  Future<void> _sync() async {
+    setState(() => _syncing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final ok = await ref.read(servicesProvider).sync.syncNow();
+      // 用 refresh(...future) 而不是 invalidate：前者会强制重算并等到
+      // 新结果出来，后者只是标记失效。同步的重点恰恰是「拉回了新东西」，
+      // 实测 invalidate 之后书架没刷新，得切一次标签页才显示出来。
+      final books = await ref.refresh(shelfProvider.future);
+      messenger.showSnackBar(SnackBar(
+        content: Text(ok ? '同步完成，书架 ${books.length} 本' : '同步失败，稍后会自动重试'),
+      ));
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: _syncing ? '正在同步' : '同步',
+      onPressed: _syncing ? null : _sync,
+      icon: _syncing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.sync),
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/services.dart';
 import '../domain/models.dart';
-import 'player_screen.dart';
+import 'start_playback.dart';
 import 'widgets/book_cover.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/format.dart';
@@ -137,14 +137,13 @@ class _HistoryTile extends ConsumerWidget {
                     ?.copyWith(color: theme.hintColor)),
           ),
           Text(' · ',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor)),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
           Text(
             entry.finished ? '听完' : formatListened(entry.listenedMs),
             style: theme.textTheme.bodySmall?.copyWith(
-              color: entry.finished
-                  ? theme.colorScheme.primary
-                  : theme.hintColor,
+              color:
+                  entry.finished ? theme.colorScheme.primary : theme.hintColor,
             ),
           ),
         ],
@@ -184,13 +183,14 @@ class _HistoryTile extends ConsumerWidget {
       return;
     }
 
-    await services.handler.openBook(book, chapters);
-    await services.handler.playChapterAt(
-      entry.chapterIndex,
-      position: Duration(milliseconds: entry.lastPositionMs),
-    );
     if (!context.mounted) return;
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
+    // 原来先 openBook 加载书的断点那一章、再 playChapterAt 加载历史这一章，
+    // 同一次点击取两次地址、加载两次音源
+    // 听完的那一章从头放：断点就在章末，接着放会立刻跳到下一章
+    await openPlayer(context, ref, book, chapters,
+        chapterIndex: entry.chapterIndex,
+        position: entry.finished
+            ? Duration.zero
+            : Duration(milliseconds: entry.lastPositionMs));
   }
 }

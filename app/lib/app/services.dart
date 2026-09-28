@@ -72,8 +72,7 @@ class AppServices {
 
     final resolver = PlaybackUrlResolver(drive);
     final sync = LibrarySync(drive: drive, db: database);
-    final downloads =
-        DownloadManager(api: api, resolver: resolver, dao: dao);
+    final downloads = DownloadManager(api: api, resolver: resolver, dao: dao);
 
     late final AudiobookHandler handler;
     handler = await AudioService.init(
@@ -168,6 +167,12 @@ final continueListeningProvider =
 
   final chapters = await ref.watch(servicesProvider).library.chapters(book.id);
   return ContinueListening.from(book, chapters);
+});
+
+/// 单本书。书籍详情页用它而不是在 build 里直接查库：后者每次重建都重查一遍，
+/// 从播放页回来时当前章的高亮也不会跟着变。
+final bookProvider = FutureProvider.family<Book?, String>((ref, bookId) async {
+  return ref.watch(servicesProvider).dao.bookById(bookId);
 });
 
 final chaptersProvider =

@@ -62,7 +62,8 @@ class LibraryRepository {
   static bool isCoverImage(DriveEntry e) {
     if (e.isDirectory) return false;
     if (!AppConfig.imageExtensions.contains(e.extension)) return false;
-    return AppConfig.coverFileNames.contains(e.nameWithoutExtension.toLowerCase());
+    return AppConfig.coverFileNames
+        .contains(e.nameWithoutExtension.toLowerCase());
   }
 
   /// 扫描一个目录，判断它能否成为一本书。
@@ -119,7 +120,9 @@ class LibraryRepository {
     // 用路径派生 ID，而不是时间戳：两台设备各自认领同一个文件夹时会得到
     // 同一个 id，同步时走正常的记录合并，而不是撞 folder_path 唯一约束、
     // 互相把对方的书连同章节一起顶掉。
-    final bookId = bookIdForFolder(folderPath);
+    // 移出书架后重新认领：沿用原来那一行（upsert 会把 deleted 置回 0）
+    final bookId = await _dao.bookIdByFolderIncludingDeleted(folderPath) ??
+        bookIdForFolder(folderPath);
     final device = await _deviceId();
 
     // 先用文件名建立章节，随后再尽力用标签修正标题与顺序。

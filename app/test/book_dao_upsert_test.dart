@@ -110,8 +110,8 @@ void main() {
 
     final after = await dao.chaptersOf('book-1');
     expect(after.length, 3);
-    expect(after.map((c) => c.title).toList(),
-        ['第 3 章', '第 2 章', '第 1 章'], reason: '手动顺序必须留住');
+    expect(after.map((c) => c.title).toList(), ['第 3 章', '第 2 章', '第 1 章'],
+        reason: '手动顺序必须留住');
   });
 
   test('章节里的离线缓存账不会被元数据更新冲掉', () async {
@@ -124,8 +124,8 @@ void main() {
 
     await dao.upsertBook(makeBook(title: '改个名'));
 
-    final ch0 = (await dao.chaptersOf('book-1')).firstWhere(
-        (c) => c.id == 'book-1-ch0');
+    final ch0 = (await dao.chaptersOf('book-1'))
+        .firstWhere((c) => c.id == 'book-1-ch0');
     expect(ch0.isCached, isTrue, reason: '缓存记录没了，磁盘上的文件就成孤儿');
     expect(ch0.localPath, '/data/cache/ch0.mp3');
     expect(ch0.downloadedBytes, 1000);
@@ -142,8 +142,8 @@ void main() {
     // 系统媒体通知的进度条依赖这个值；ID3 拿不到时长，只能播放器报了才写
     await dao.setChapterDuration('book-1-ch0', 3042000);
 
-    final ch0 =
-        (await dao.chaptersOf('book-1')).firstWhere((c) => c.id == 'book-1-ch0');
+    final ch0 = (await dao.chaptersOf('book-1'))
+        .firstWhere((c) => c.id == 'book-1-ch0');
     expect(ch0.durationMs, 3042000);
     expect(ch0.isCached, isTrue);
     expect(ch0.localPath, '/data/cache/ch0.mp3');
@@ -162,5 +162,18 @@ void main() {
     expect((await dao.bookById('book-2'))!.title, '球状闪电');
     // 原来那本不受影响
     expect((await dao.chaptersOf('book-1')).length, 3);
+  });
+
+  test('移出书架后同一文件夹能重新加回来', () async {
+    await dao.markBookDeleted('book-1', 'dev');
+
+    // 已删除的不算"已在书架中"，否则认领直接返回它、书架上却看不到
+    expect(await dao.bookByFolder('/有声书/三体'), isNull);
+    // 重新认领沿用原 id，upsert 把 deleted 置回 0
+    expect(await dao.bookIdByFolderIncludingDeleted('/有声书/三体'), 'book-1');
+    await dao.upsertBook(makeBook());
+
+    expect((await dao.bookByFolder('/有声书/三体'))!.id, 'book-1');
+    expect((await dao.allBooks()).map((b) => b.id), contains('book-1'));
   });
 }

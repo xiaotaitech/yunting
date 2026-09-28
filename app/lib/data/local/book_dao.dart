@@ -27,10 +27,26 @@ class BookDao {
     return rows.isEmpty ? null : _toBook(rows.first);
   }
 
+  /// 书架上（未删除）的那本。原来不过滤软删除：移出书架的书再去认领，
+  /// 会被当成"已在书架中"直接返回，书架上却看不到，那个文件夹就再也加不回来。
   Future<Book?> bookByFolder(String folderPath) async {
     final rows = await _db.query('books',
-        where: 'folder_path = ?', whereArgs: [folderPath], limit: 1);
+        where: 'folder_path = ? AND deleted = 0',
+        whereArgs: [folderPath],
+        limit: 1);
     return rows.isEmpty ? null : _toBook(rows.first);
+  }
+
+  /// 这个文件夹曾经用过的书 id（含已删除的）。重新认领时沿用它：
+  /// folder_path 有唯一约束，老版本按时间戳生成的 id 与路径派生的对不上，
+  /// 另起一个 id 插入会撞约束。
+  Future<String?> bookIdByFolderIncludingDeleted(String folderPath) async {
+    final rows = await _db.query('books',
+        columns: ['id'],
+        where: 'folder_path = ?',
+        whereArgs: [folderPath],
+        limit: 1);
+    return rows.isEmpty ? null : rows.first['id'] as String;
   }
 
   /// 更新或插入一本书。**绝不能用 `ConflictAlgorithm.replace`。**
@@ -216,9 +232,10 @@ class BookDao {
         titleEditedByUser: (r['title_edited'] as num).toInt() == 1,
         authorEditedByUser: (r['author_edited'] as num).toInt() == 1,
         orderEditedByUser: (r['order_edited'] as num).toInt() == 1,
-        addedAt: DateTime.fromMillisecondsSinceEpoch((r['added_at'] as num).toInt()),
-        updatedAt:
-            DateTime.fromMillisecondsSinceEpoch((r['updated_at'] as num).toInt()),
+        addedAt:
+            DateTime.fromMillisecondsSinceEpoch((r['added_at'] as num).toInt()),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(
+            (r['updated_at'] as num).toInt()),
         lastPlayedAt: r['last_played_at'] == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch(

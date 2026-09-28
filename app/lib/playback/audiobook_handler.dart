@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../core/config.dart';
@@ -28,8 +29,9 @@ class PlaybackFailure {
 class AudiobookHandler extends BaseAudioHandler with SeekHandler {
   AudiobookHandler({
     required PlaybackUrlResolver resolver,
-    required Future<void> Function(String bookId, int chapterIndex,
-            int positionMs, {bool? finished, bool? chapterFinished})
+    required Future<void> Function(
+            String bookId, int chapterIndex, int positionMs,
+            {bool? finished, bool? chapterFinished})
         onProgress,
     required Future<void> Function() onAuthFailure,
     required Future<void> Function(String chapterId, int durationMs) onDuration,
@@ -102,6 +104,21 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
 
   /// 非致命的体验提示，例如「网络较慢，建议先下载」。
   Stream<String> get hints => _hints.stream;
+
+  /// 正在准备一章（取播放地址 + 加载音源）。这期间播放器里还是上一段音频，
+  /// 它的位置与时长都不属于当前章，界面要换成"准备中"来显示。
+  final preparing = ValueNotifier<bool>(false);
+
+  /// 准备好之后是否自动开始播放。准备期间按暂停只是把它置 false，
+  /// 不会等加载完又自己响起来。
+  final playAfterLoad = ValueNotifier<bool>(false);
+
+  /// 准备中的章要从哪里开始，给进度条在加载完成前显示。
+  Duration pendingPosition = Duration.zero;
+
+  /// 每次开始播放一本书都加一。连着点两本书时，前一次的加载晚到或失败
+  /// 都要作废，不能把后一本的状态冲掉。
+  int _startGen = 0;
 
   SleepTimer get sleepTimer => _sleepTimer;
   AudioPlayer get player => _player;
@@ -272,27 +289,46 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
   // ------------------------------------------------------------ 播放入口
 
   /// 打开一本书并从指定位置开始。默认沿用书上记录的断点。
-  Future<void> openBook(
+  /// 从界面开始播放一本书：先同步切到新章（标题、封面、章节立刻可见），
+  /// 再在后台取地址、加载并播放。调用方不用等它——界面可以先跳到播放页，
+  /// 加载失败走和播放中断一样的恢复流程，由 [failures] 报给界面。
+  ///
+  /// 不传 [chapterIndex] 时从书的断点续播；已听完的书从第一章重来。
+  Future<void> start(
     Book book,
     List<Chapter> chapters, {
     int? chapterIndex,
     Duration? position,
   }) async {
-    _book = book;
-    _chapters = chapters;
     if (chapters.isEmpty) return;
-
     var index = chapterIndex ?? book.currentChapterIndex;
-    var start = position ?? Duration(milliseconds: book.currentPositionMs);
-
+    var at = position ?? Duration(milliseconds: book.currentPositionMs);
     // 已听完的书重新播放时从头开始（listening-progress 规格）
     if (book.finished && chapterIndex == null) {
       index = 0;
-      start = Duration.zero;
+      at = Duration.zero;
     }
-
+    final gen = ++_startGen;
+    // 下面到 _loadCurrent 第一次 await 之前都是同步的：调用方紧接着打开播放页时，
+    // 新书的标题、章节和"准备中"状态已经就位，不会先闪一下上一本。
+    // 上一本的断点在切换前同步取走（_saveProgress 在第一个 await 前读完字段）。
+    unawaited(_saveProgress(force: true));
+    // 停下正在放的上一段，免得新书准备期间旧书还在响
+    if (_player.playing) unawaited(_player.pause());
+    _book = book;
+    _chapters = chapters;
     _index = index.clamp(0, chapters.length - 1);
-    await _loadCurrent(initialPosition: start);
+    playAfterLoad.value = true;
+    try {
+      await _loadCurrent(initialPosition: at);
+    } catch (e) {
+      if (gen != _startGen || e is PlayerInterruptedException) return;
+      Log.e('player', '开始播放时加载失败，进入恢复流程', e);
+      await _handlePlaybackError(e, resumeAt: at);
+      return;
+    }
+    if (gen != _startGen) return;
+    if (playAfterLoad.value) unawaited(_player.play());
   }
 
   Future<void> playChapterAt(int index, {Duration? position}) async {
@@ -305,10 +341,11 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
       // play() 不再执行，界面既没声音也没提示；用户再按一次播放键只是把
       // playWhenReady 置真，于是显示成「正在播放」而底层没有音源。
       Log.e('player', '章节加载失败，进入恢复流程', e);
-      await _handlePlaybackError(e);
+      await _handlePlaybackError(e, resumeAt: position ?? Duration.zero);
       return;
     }
-    await play();
+    // play() 要到暂停才返回，调用方（切章、自动续播）不该被它挂住
+    unawaited(play());
   }
 
   /// 通知栏与锁屏展示的媒体条目。
@@ -323,9 +360,8 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
         title: chapter.title,
         artist: book.author,
         duration: duration,
-        artUri: book.coverLocalPath == null
-            ? null
-            : Uri.file(book.coverLocalPath!),
+        artUri:
+            book.coverLocalPath == null ? null : Uri.file(book.coverLocalPath!),
         extras: {'bookId': book.id, 'chapterIndex': _index},
       );
 
@@ -334,8 +370,9 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
     final book = _book;
     if (chapter == null || book == null) return;
 
-    final media = await _resolver.resolve(chapter);
-    // 库里存过时长就先用上，通知栏的进度条不用等加载完才出现
+    // 先发出新章的条目再去取地址：标题、封面立刻换过来，取地址那一两秒
+    // 界面显示"准备中"，而不是停在上一章不动。
+    // 库里存过时长就先用上，通知栏的进度条不用等加载完才出现。
     mediaItem.add(_mediaItemFor(
       chapter,
       book,
@@ -343,15 +380,21 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
           ? null
           : Duration(milliseconds: chapter.durationMs!),
     ));
-
-    // 超时后当作播放失败抛出去，由调用方或 onError 走恢复流程。
-    // 没有这个超时的话，流不给数据就永久挂在这一行。
-    await _player
-        .setAudioSource(
-          AudioSource.uri(Uri.parse(media.url)),
-          initialPosition: initialPosition,
-        )
-        .timeout(_loadTimeout);
+    pendingPosition = initialPosition;
+    preparing.value = true;
+    try {
+      final media = await _resolver.resolve(chapter);
+      // 超时后当作播放失败抛出去，由调用方或 onError 走恢复流程。
+      // 没有这个超时的话，流不给数据就永久挂在这一行。
+      await _player
+          .setAudioSource(
+            AudioSource.uri(Uri.parse(media.url)),
+            initialPosition: initialPosition,
+          )
+          .timeout(_loadTimeout);
+    } finally {
+      preparing.value = false;
+    }
     _recoveryAttempt = 0;
     _stalls.clear();
 
@@ -363,10 +406,19 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
   // ------------------------------------------------------------ 传输控制
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() {
+    // 准备中按播放：记下意图，加载完成后开始。不能直接 _player.play()，
+    // 那会先把还留在播放器里的上一段音频放出来。
+    if (preparing.value) {
+      playAfterLoad.value = true;
+      return Future.value();
+    }
+    return _player.play();
+  }
 
   @override
   Future<void> pause() async {
+    playAfterLoad.value = false;
     await _player.pause();
     await _saveProgress(force: true);
   }
@@ -473,19 +525,22 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
 
   /// dlink 过期 / 链接失效导致的中断，在这里无感恢复：
   /// 作废地址缓存 → 重新解析 → 重新加载 → seek 回中断位置。
-  Future<void> _handlePlaybackError(Object error) async {
+  Future<void> _handlePlaybackError(Object error, {Duration? resumeAt}) async {
     if (_recovering) return;
     final chapter = currentChapter;
     if (chapter == null) return;
 
     _recovering = true;
-    final resumeAt = _player.position;
+    // 首次加载就失败时播放器里还没有这一章，它的 position 不是断点，
+    // 由调用方把要续播的位置传进来
+    final at = resumeAt ?? _player.position;
 
     try {
       while (_recoveryAttempt < _maxRecoveryAttempts) {
         _recoveryAttempt++;
         // 指数退避（规格「连续失败后报错」）
-        final backoff = Duration(milliseconds: 400 * (1 << (_recoveryAttempt - 1)));
+        final backoff =
+            Duration(milliseconds: 400 * (1 << (_recoveryAttempt - 1)));
         await Future<void>.delayed(backoff);
 
         try {
@@ -496,11 +551,13 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
           await _player
               .setAudioSource(
                 AudioSource.uri(Uri.parse(media.url)),
-                initialPosition: resumeAt,
+                initialPosition: at,
               )
               .timeout(_loadTimeout);
-          await _player.play();
-          Log.d('player', '播放已恢复，位置 ${resumeAt.inSeconds}s（第 $_recoveryAttempt 次尝试）');
+          // 不能 await：just_audio 的 play() 要等到暂停或播完才返回，
+          // await 的话恢复流程一直不结束，_recovering 卡在 true，之后的错误全被吞掉
+          unawaited(_player.play());
+          Log.d('player', '播放已恢复，位置 ${at.inSeconds}s（第 $_recoveryAttempt 次尝试）');
           _recoveryAttempt = 0;
           return;
         } on DriveException catch (e) {
@@ -523,7 +580,8 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
 
       // 达到上限：暂停并保留播放位置，交给用户手动重试
       await _player.pause();
-      _failures.add(const PlaybackFailure('播放地址反复获取失败，请检查网络后重试', canRetry: true));
+      _failures
+          .add(const PlaybackFailure('播放地址反复获取失败，请检查网络后重试', canRetry: true));
     } finally {
       _recovering = false;
     }
@@ -534,7 +592,7 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
     _recoveryAttempt = 0;
     final position = _player.position;
     await _loadCurrent(initialPosition: position);
-    await play();
+    unawaited(play());
   }
 
   // ------------------------------------------------------------ 进度
@@ -549,6 +607,8 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
   Future<void> _saveProgress({bool force = false}) async {
     final book = _book;
     if (book == null) return;
+    // 准备期间播放器的位置还是上一段音频的，写进去会把新书的断点冲掉
+    if (preparing.value) return;
     if (!force &&
         DateTime.now().difference(_lastProgressSave) < _progressSaveInterval) {
       return;
@@ -560,6 +620,8 @@ class AudiobookHandler extends BaseAudioHandler with SeekHandler {
   Future<void> disposeHandler() async {
     _stopWatchdog();
     _sleepTimer.dispose();
+    preparing.dispose();
+    playAfterLoad.dispose();
     await _failures.close();
     await _hints.close();
     await _player.dispose();

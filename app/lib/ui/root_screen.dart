@@ -25,7 +25,8 @@ class RootScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider);
     // bootstrap 阶段已经 restore 过，这里直接用同步快照做初值，
     // 之后由 stateChanges 推动切换。不要在 build 里再触发一次异步恢复。
-    final state = ref.watch(authStateProvider).value ?? services.auth.currentState;
+    final state =
+        ref.watch(authStateProvider).value ?? services.auth.currentState;
 
     switch (state) {
       case AuthState.unknown:
@@ -71,7 +72,9 @@ class _MainShellState extends ConsumerState<_MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(child: _pages[_tab]),
+      // IndexedStack 让三个页面常驻：原来切一次标签就重建一次，
+      // 书架、历史的滚动位置每次都回到顶部。数据仍在切换时按需刷新（见下）。
+      body: SafeArea(child: IndexedStack(index: _tab, children: _pages)),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:audio_service/audio_service.dart';
@@ -23,13 +24,24 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   static const _speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
+  // 原来这两个订阅从不取消：每进一次播放页就多挂一个监听，页面关掉后还在
+  StreamSubscription<String>? _hintSub;
+  StreamSubscription<PlaybackFailure>? _failureSub;
+
+  @override
+  void dispose() {
+    _hintSub?.cancel();
+    _failureSub?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
 
     // 反复缓冲时提示改用离线下载，并直接给出一键下载入口
     // （规格「速率不足提示」）
-    ref.read(servicesProvider).handler.hints.listen((message) {
+    _hintSub = ref.read(servicesProvider).handler.hints.listen((message) {
       if (!mounted) return;
       final services = ref.read(servicesProvider);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -53,7 +65,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     });
 
     // 恢复失败达到上限时给出可重试的提示（规格「连续失败后报错」）
-    ref.read(servicesProvider).handler.failures.listen((f) {
+    _failureSub = ref.read(servicesProvider).handler.failures.listen((f) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(f.message),
@@ -244,14 +256,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       builder: (ctx) => _SheetShell(
         title: '播放速度',
         children: [
-            for (final s in _speeds)
-              ListTile(
-                title: Text(formatSpeed(s)),
-                trailing: (s - current).abs() < 0.01
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () => Navigator.pop(ctx, s),
-              ),
+          for (final s in _speeds)
+            ListTile(
+              title: Text(formatSpeed(s)),
+              trailing:
+                  (s - current).abs() < 0.01 ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.pop(ctx, s),
+            ),
         ],
       ),
     );
@@ -266,92 +277,130 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       builder: (ctx) => _SheetShell(
         title: '睡眠定时',
         children: [
-            for (final minutes in [10, 20, 30, 45, 60, 90])
-              ListTile(
-                title: Text('$minutes 分钟后停止'),
-                onTap: () {
-                  timer.startDuration(Duration(minutes: minutes));
-                  Navigator.pop(ctx);
-                },
-              ),
+          for (final minutes in [10, 20, 30, 45, 60, 90])
             ListTile(
-              title: const Text('播完本章后停止'),
+              title: Text('$minutes 分钟后停止'),
               onTap: () {
-                timer.startEndOfChapter();
+                timer.startDuration(Duration(minutes: minutes));
                 Navigator.pop(ctx);
               },
             ),
-            if (timer.state.isActive)
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('取消定时'),
-                onTap: () {
-                  timer.cancel();
-                  Navigator.pop(ctx);
-                },
-              ),
+          ListTile(
+            title: const Text('播完本章后停止'),
+            onTap: () {
+              timer.startEndOfChapter();
+              Navigator.pop(ctx);
+            },
+          ),
+          if (timer.state.isActive)
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('取消定时'),
+              onTap: () {
+                timer.cancel();
+                Navigator.pop(ctx);
+              },
+            ),
         ],
       ),
     );
   }
 }
 
-class _PositionBar extends StatelessWidget {
+/// 进度条。
+///
+/// 拖动时只改本地的值、松手才 seek：原来 onChanged 里直接 seek，拖一下就是
+/// 几十次 seek，网络流上每次都要重新缓冲，拖动一卡一卡，圆点还会被
+/// 晚到的播放位置拽回去。拖动中两侧时间显示的是手指所在的位置。
+///
+/// 准备新章期间播放器里还是上一段音频，这时显示新章的续播点和库里记的时长，
+/// 并禁止拖动。
+class _PositionBar extends StatefulWidget {
   const _PositionBar({required this.handler});
 
   final AudiobookHandler handler;
 
   @override
+  State<_PositionBar> createState() => _PositionBarState();
+}
+
+class _PositionBarState extends State<_PositionBar> {
+  double? _dragMs;
+
+  AudiobookHandler get handler => widget.handler;
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Duration>(
-      stream: handler.player.positionStream,
-      builder: (context, posSnap) {
-        final position = posSnap.data ?? Duration.zero;
-        final duration = handler.player.duration ?? Duration.zero;
-        final max = duration.inMilliseconds.toDouble();
-        final value = position.inMilliseconds
-            .clamp(0, duration.inMilliseconds)
-            .toDouble();
+    return ValueListenableBuilder<bool>(
+      valueListenable: handler.preparing,
+      builder: (context, preparing, _) => StreamBuilder<Duration>(
+        stream: handler.player.positionStream,
+        builder: (context, posSnap) =>
+            _build(context, preparing, posSnap.data ?? Duration.zero),
+      ),
+    );
+  }
 
-        final theme = Theme.of(context);
-        // 默认 Slider 的 thumb 半径 10，在一条听书进度上像个旋钮。
-        // 收细轨道、缩小圆点。时间用等宽数字，免得秒数跳动时整行左右抖。
-        final timeStyle = theme.textTheme.bodySmall?.copyWith(
-          color: theme.hintColor,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        );
+  Widget _build(BuildContext context, bool preparing, Duration playerPosition) {
+    final known = handler.currentChapter?.durationMs;
+    final duration = preparing
+        ? Duration(milliseconds: known ?? 0)
+        : handler.player.duration ?? Duration(milliseconds: known ?? 0);
+    final max = duration.inMilliseconds.toDouble();
+    final position = _dragMs != null
+        ? Duration(milliseconds: _dragMs!.round())
+        : preparing
+            ? handler.pendingPosition
+            : playerPosition;
+    final value =
+        position.inMilliseconds.clamp(0, duration.inMilliseconds).toDouble();
+    final canSeek = !preparing && max > 0;
 
-        return Column(
-          children: [
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 4,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                inactiveTrackColor: theme.colorScheme.surfaceContainerHighest,
-              ),
-              child: Slider(
-                value: max == 0 ? 0 : value,
-                max: max == 0 ? 1 : max,
-                onChanged: max == 0
-                    ? null
-                    : (v) => handler.seek(Duration(milliseconds: v.round())),
-              ),
-            ),
-            Padding(
-              // 与 Slider 自带的左右内边距对齐，免得时间比轨道更靠外
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(formatDuration(position), style: timeStyle),
-                  Text(formatDuration(duration), style: timeStyle),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+    final theme = Theme.of(context);
+    // 默认 Slider 的 thumb 半径 10，在一条听书进度上像个旋钮。
+    // 收细轨道、缩小圆点。时间用等宽数字，免得秒数跳动时整行左右抖。
+    final timeStyle = theme.textTheme.bodySmall?.copyWith(
+      color: _dragMs != null ? theme.colorScheme.primary : theme.hintColor,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+    return Column(
+      children: [
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 4,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            inactiveTrackColor: theme.colorScheme.surfaceContainerHighest,
+          ),
+          child: Slider(
+            value: max == 0 ? 0 : value,
+            max: max == 0 ? 1 : max,
+            onChangeStart: canSeek ? (v) => setState(() => _dragMs = v) : null,
+            onChanged: canSeek ? (v) => setState(() => _dragMs = v) : null,
+            onChangeEnd: canSeek
+                ? (v) async {
+                    await handler.seek(Duration(milliseconds: v.round()));
+                    // seek 完成后播放位置才跟上，这之前继续显示松手的位置，
+                    // 免得圆点先弹回旧位置再跳过去
+                    if (mounted) setState(() => _dragMs = null);
+                  }
+                : null,
+          ),
+        ),
+        Padding(
+          // 与 Slider 自带的左右内边距对齐，免得时间比轨道更靠外
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(formatDuration(position), style: timeStyle),
+              Text(max == 0 ? '--:--' : formatDuration(duration),
+                  style: timeStyle),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -363,53 +412,77 @@ class _TransportControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<PlayerState>(
-      stream: handler.player.playerStateStream,
-      builder: (context, snap) {
-        final state = snap.data;
-        final playing = state?.playing ?? false;
-        final loading = state?.processingState == ProcessingState.loading ||
-            state?.processingState == ProcessingState.buffering;
+    return ListenableBuilder(
+      listenable: Listenable.merge([handler.preparing, handler.playAfterLoad]),
+      builder: (context, _) => StreamBuilder<PlayerState>(
+        stream: handler.player.playerStateStream,
+        builder: (context, snap) => _build(snap.data),
+      ),
+    );
+  }
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              iconSize: 32,
-              icon: const Icon(Icons.skip_previous),
-              onPressed: handler.skipToPrevious,
-            ),
-            IconButton(
-              iconSize: 32,
-              tooltip: '快退 15 秒',
-              icon: const _SkipIcon(forward: false),
-              onPressed: handler.rewind15,
-            ),
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : IconButton.filled(
-                      iconSize: 44,
-                      icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                      onPressed: playing ? handler.pause : handler.play,
-                    ),
-            ),
-            IconButton(
-              iconSize: 32,
-              tooltip: '快进 15 秒',
-              icon: const _SkipIcon(forward: true),
-              onPressed: handler.forward15,
-            ),
-            IconButton(
-              iconSize: 32,
-              icon: const Icon(Icons.skip_next),
-              onPressed: handler.skipToNext,
-            ),
-          ],
-        );
-      },
+  Widget _build(PlayerState? state) {
+    final preparing = handler.preparing.value;
+    // 准备中显示的是"加载完会不会播"：点了播放就显示暂停键，按下去就取消自动播放
+    final playing =
+        preparing ? handler.playAfterLoad.value : state?.playing ?? false;
+    final loading = preparing ||
+        state?.processingState == ProcessingState.loading ||
+        state?.processingState == ProcessingState.buffering;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        IconButton(
+          iconSize: 32,
+          icon: const Icon(Icons.skip_previous),
+          onPressed: handler.skipToPrevious,
+        ),
+        IconButton(
+          iconSize: 32,
+          tooltip: '快退 15 秒',
+          // 准备中没有可以 seek 的音源
+          icon: const _SkipIcon(forward: false),
+          onPressed: preparing ? null : handler.rewind15,
+        ),
+        // 加载、缓冲时不再把播放键换成转圈：原来那几秒里按不了暂停，
+        // 按钮还会忽隐忽现。现在按钮一直在，外面套一圈进度表示在加载。
+        SizedBox(
+          width: 72,
+          height: 72,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (loading)
+                const SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+              SizedBox(
+                width: 62,
+                height: 62,
+                child: IconButton.filled(
+                  iconSize: 40,
+                  tooltip: playing ? '暂停' : '播放',
+                  icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                  onPressed: playing ? handler.pause : handler.play,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          iconSize: 32,
+          tooltip: '快进 15 秒',
+          icon: const _SkipIcon(forward: true),
+          onPressed: preparing ? null : handler.forward15,
+        ),
+        IconButton(
+          iconSize: 32,
+          icon: const Icon(Icons.skip_next),
+          onPressed: handler.skipToNext,
+        ),
+      ],
     );
   }
 }
@@ -438,8 +511,8 @@ class _SheetShell extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child:
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
             Flexible(
               child: ListView(shrinkWrap: true, children: children),
@@ -450,7 +523,6 @@ class _SheetShell extends StatelessWidget {
     );
   }
 }
-
 
 /// 快退/快进 15 秒的图标。
 ///

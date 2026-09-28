@@ -5,6 +5,8 @@ import '../app/services.dart';
 import '../core/errors.dart';
 import '../data/drive/cloud_drive_source.dart';
 import '../domain/library_repository.dart';
+import '../domain/models.dart';
+import 'book_detail_screen.dart';
 import 'widgets/format.dart';
 
 /// 网盘目录浏览与「加入书架」（library-catalog 规格）。
@@ -62,8 +64,7 @@ class BrowseScreen extends ConsumerWidget {
                     ? const _EmptyFolder()
                     : ListView.builder(
                         itemCount: entries.length,
-                        itemBuilder: (_, i) =>
-                            _EntryTile(entry: entries[i]),
+                        itemBuilder: (_, i) => _EntryTile(entry: entries[i]),
                       ),
               ),
             ],
@@ -92,10 +93,14 @@ class _ClaimBar extends ConsumerStatefulWidget {
 class _ClaimBarState extends ConsumerState<_ClaimBar> {
   bool _busy = false;
 
+  late final Future<Book?> _existing =
+      ref.read(servicesProvider).dao.bookByFolder(widget.path);
+
   /// 本目录没有音频但有子目录时，仍允许认领——
   /// 子目录会被展开成连续章节（规格「含子目录的书」）。
   bool get _canClaim =>
-      widget.path != '/' && (widget.audioCount > 0 || widget.subFolderCount > 0);
+      widget.path != '/' &&
+      (widget.audioCount > 0 || widget.subFolderCount > 0);
 
   /// 子目录多到不像「卷/季」，更像一个装了很多本书的书库。
   ///
@@ -129,12 +134,17 @@ class _ClaimBarState extends ConsumerState<_ClaimBar> {
       services.sync.markDirty();
       ref.invalidate(shelfProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(before != null
-            ? '《${book.title}》已在书架中'
-            : '已加入书架：《${book.title}》（${book.chapterCount} 章）'),
+      final messenger = ScaffoldMessenger.of(context);
+      if (before != null) {
+        messenger.showSnackBar(SnackBar(content: Text('《${book.title}》已在书架中')));
+        return;
+      }
+      // 直接回到书架：原来只退一层，从「我的有声书/三体」加完书还得连按几次返回，
+      // 按多了就退出了应用
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      messenger.showSnackBar(SnackBar(
+        content: Text('已加入书架：《${book.title}》（${book.chapterCount} 章）'),
       ));
-      if (before == null && mounted) Navigator.of(context).pop();
     } on DriveException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -152,25 +162,50 @@ class _ClaimBarState extends ConsumerState<_ClaimBar> {
       color: theme.colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _hint,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: _looksLikeLibrary ? theme.colorScheme.error : null,
+        child: FutureBuilder<Book?>(
+          future: _existing,
+          builder: (context, snap) {
+            final existing = snap.data;
+            // 已经在书架上的文件夹：原来按钮照样亮着，点了才说"已在书架中"。
+            // 现在直接说明，并给一个进书的入口。
+            if (existing != null) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text('《${existing.title}》已在书架中',
+                        style: theme.textTheme.bodySmall),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                BookDetailScreen(bookId: existing.id))),
+                    child: const Text('查看'),
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _hint,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: _looksLikeLibrary ? theme.colorScheme.error : null,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            FilledButton.tonal(
-              onPressed: _canClaim && !_busy ? _claim : null,
-              child: Text(_busy
-                  ? '处理中…'
-                  : _looksLikeLibrary
-                      ? '仍要合成一本'
-                      : '加入书架'),
-            ),
-          ],
+                FilledButton.tonal(
+                  onPressed: _canClaim && !_busy ? _claim : null,
+                  child: Text(_busy
+                      ? '处理中…'
+                      : _looksLikeLibrary
+                          ? '仍要合成一本'
+                          : '加入书架'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -217,8 +252,8 @@ class _EmptyFolder extends StatelessWidget {
           Icon(Icons.folder_open, size: 56, color: theme.hintColor),
           const SizedBox(height: 12),
           Text('这个文件夹是空的',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.hintColor)),
+              style:
+                  theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
         ],
       ),
     );
