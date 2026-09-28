@@ -30,7 +30,7 @@
 - [x] 5.1 `android/app/build.gradle.kts`：keystore.properties / 环境变量签名，都没有时回落 debug 签名
 - [x] 5.2 `.github/workflows/ci.yml`、`release.yml`（版本号由标签计算、Release、dist 分支 latest.json、未配置凭证时发演示版）
 - [x] 5.3 README「发布与分发」一节
-- [ ] 5.4 创建开源仓库 xiaotaitech/yunting、配置签名 Secrets、推送 v0.1.0 验证
+- [x] 5.4 创建开源仓库 xiaotaitech/yunting、配置签名 Secrets、推送 v0.1.0 验证（演示版已发布，签名指纹核对一致）
 - [ ] 5.5 部署公网 OAuth 代理，配置 BAIDU_APP_KEY / OAUTH_PROXY_BASE 后发第一个正式版
 
 ## 6. 图标与标志
