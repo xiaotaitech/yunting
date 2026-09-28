@@ -1,0 +1,12 @@
+{
+  "name": "yun-audiobook-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OAuth 代理 + 百度网盘链路验证工具（听书 App 的服务端与 Phase 0 验证）",
+  "scripts": {
+    "proxy": "node src/oauth-proxy.mjs",
+    "verify": "node src/verify-chain.mjs"
+  },
+  "engines": { "node": ">=18" }
+}

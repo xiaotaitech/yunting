@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知栏图标只在 Dart 里按名字引用（AudioServiceConfig.androidNotificationIcon），release 资源压缩看不到，这里声明保留 -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_yun" />

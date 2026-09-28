@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  调试配置：在发布配置的基础上，额外允许连本机开发用的 OAuth 代理。
+
+  10.0.2.2 是 Android 模拟器对宿主机的固定别名；
+  192.168/10.x 是真机连同一局域网里那台跑 `npm run proxy` 的电脑。
+  这些只在 debug 构建生效，发布包不受影响——正式部署时 OAuth 代理应当走 HTTPS。
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="true"/>
+</network-security-config>

@@ -1,0 +1,23 @@
+schema: spec-driven
+
+# 生成提案、设计、规格、任务时给 AI 的项目背景
+context: |
+  项目：云听书 —— 以用户自己的百度网盘为数据源的听书 App（Android 为主，iOS 次之）。
+  技术栈：Flutter（Dart 3.4+）、flutter_riverpod、just_audio + audio_service、sqflite；
+  Android 原生部分用 Kotlin（MainActivity 继承 AudioServiceActivity，需要系统能力时走 MethodChannel）。
+  服务端只有 tools/ 下的 OAuth 代理（Node），只代理凭证，不代理数据。
+  本地键值设置存在 sync_meta 表（AppDatabase.meta / setMeta）。
+  合规边界：只访问授权用户本人文件；不托管、不分发音频；不调用分享类接口。
+  文档、界面文案、规格一律用简体中文；规格里的 SHALL/MUST 保留英文关键字。
+  同级目录 ../reel 只作思路参考，不复用其代码、仓库与文案；本项目的取舍以自身约束为准。
+
+rules:
+  proposal:
+    - 写清楚「为什么」与「不做什么」
+  tasks:
+    - 每个任务可独立验证；涉及原生代码的任务注明需要真机验证
+
+# operations:
+#   apply:
+#     guidance:
+#       - Keep test summaries concise

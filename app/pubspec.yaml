@@ -1,0 +1,44 @@
+name: yun_audiobook
+description: 以百度网盘为数据源的听书 App
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 播放：just_audio 支持 userAgent 与自定义 header，且重定向后仍保留 UA，
+  # 这是满足百度 dlink 强制 User-Agent: pan.baidu.com 的关键（design.md D1）。
+  just_audio: ^0.10.6
+  audio_service: ^0.18.19
+  audio_session: ^0.2.4
+
+  # 状态管理
+  flutter_riverpod: ^2.6.1
+
+  # 本地持久化：SQLite 是书架与进度的权威来源（design.md D5）
+  sqflite: ^2.4.3
+  path_provider: ^2.1.6
+  path: ^1.9.1
+
+  # 令牌必须进平台安全存储，不得明文落盘（netdisk-auth 规格）
+  flutter_secure_storage: ^11.0.0
+
+  http: ^1.6.0
+  crypto: ^3.0.7
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  sqflite_common_ffi: ^2.4.2+1
+
+flutter:
+  uses-material-design: true
+  # 使用帮助（app-help 规格）
+  assets:
+    - assets/help.md

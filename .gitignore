@@ -1,0 +1,29 @@
+# 凭证与令牌，绝不入库
+tools/.env
+tools/.token.json
+
+# 依赖与构建产物
+node_modules/
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+app/android/.gradle/
+app/android/local.properties
+app/ios/Pods/
+build.log
+
+# 本机工具链路径（换机器需要重新生成）
+env.sh
+
+# 签名密钥与口令，绝不入库
+keystore.properties
+*.jks
+
+# 本机构建日志
+*.log
+
+# 签名密钥目录（密钥本身已由 *.jks 忽略，这里整目录兜底）
+keystore/
+
+# Claude Code 本机设置
+.claude/settings.local.json
