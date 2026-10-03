@@ -1,4 +1,4 @@
-package com.yunaudiobook.yun_audiobook
+package tech.xiaotai.yunting
 
 import android.app.DownloadManager
 import android.content.BroadcastReceiver

@@ -86,7 +86,7 @@ class AppServices {
     final bridge = _bridge ??= await AudioService.init(
       builder: () => AudioServiceBridge(session),
       config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.yunaudiobook.playback',
+        androidNotificationChannelId: 'tech.xiaotai.yunting.playback',
         androidNotificationChannelName: '听书播放',
         androidNotificationOngoing: true,
         // 自己的通知栏图标（res/drawable/ic_stat_yun.xml），不用默认的启动图标

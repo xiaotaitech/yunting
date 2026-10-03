@@ -251,10 +251,13 @@ Android 自适应图标是 `res/drawable/ic_launcher_*.xml`，坐标与 Dart 一
 | `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` | 签名。所有渠道必须同一个密钥，否则无法覆盖升级 |
 | `BAIDU_APP_KEY` / `OAUTH_PROXY_BASE` | 打进安装包的 AppKey 与 OAuth 代理地址（代理必须公网可达）。不配置则发演示版 |
 
+包名是 `tech.xiaotai.yunting`（0.3 之后）。更早的 `com.yunaudiobook.yun_audiobook` 是另一把密钥签的旧包，
+已废弃；两者包名不同，可以同时装在手机上，旧包的书架登录同一网盘账号后会经同步恢复到新包。
+
 本机签名：根目录放 `keystore.properties`（已忽略），`KEYSTORE_FILE` 相对仓库根目录：
 
 ```properties
-KEYSTORE_FILE=keystore/yunting.jks
+KEYSTORE_FILE=keystore/yunting-release.jks
 KEYSTORE_PASSWORD=...
 KEY_ALIAS=yunting
 KEY_PASSWORD=...
