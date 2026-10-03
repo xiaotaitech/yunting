@@ -1,5 +1,5 @@
 // 从 BrandMark 渲染启动图标 PNG（Android 旧版方形图标与 iOS AppIcon）。
-// 改了 lib/ui/widgets/brand_mark.dart 之后运行：
+// 改了 lib/features/common/widgets/brand_mark.dart 之后运行：
 //
 //   cd app && flutter test tool/generate_icons_test.dart
 //
@@ -9,7 +9,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yun_audiobook/ui/widgets/brand_mark.dart';
+import 'package:yun_audiobook/features/common/widgets/brand_mark.dart';
 
 Future<void> _write(String path, int px, {required bool rounded}) async {
   final recorder = ui.PictureRecorder();

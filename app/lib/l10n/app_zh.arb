@@ -1,4 +1,59 @@
 {
   "@@locale": "zh",
-  "appName": "云听书"
+  "appName": "云听书",
+
+  "navShelf": "书架",
+  "navHistory": "历史",
+  "navMine": "我的",
+
+  "actionCancel": "取消",
+  "actionConfirm": "确定",
+  "actionRetry": "重试",
+  "actionDelete": "删除",
+
+  "splashLoading": "正在准备…",
+  "bootstrapFailed": "启动失败：{detail}",
+  "@bootstrapFailed": {"placeholders": {"detail": {"type": "String"}}},
+
+  "timeJustNow": "刚刚",
+  "timeMinutesAgo": "{n} 分钟前",
+  "@timeMinutesAgo": {"placeholders": {"n": {"type": "int"}}},
+  "timeTodayAt": "今天 {hm}",
+  "@timeTodayAt": {"placeholders": {"hm": {"type": "String"}}},
+  "timeDaysAgo": "{n} 天前",
+  "@timeDaysAgo": {"placeholders": {"n": {"type": "int"}}},
+  "dayToday": "今天",
+  "dayYesterday": "昨天",
+  "dayThisYear": "{month} 月 {day} 日",
+  "@dayThisYear": {"placeholders": {"month": {"type": "String"}, "day": {"type": "String"}}},
+  "dayOtherYear": "{year} 年 {month} 月 {day} 日",
+  "@dayOtherYear": {"placeholders": {"year": {"type": "int"}, "month": {"type": "String"}, "day": {"type": "String"}}},
+  "listenedJustStarted": "刚开始",
+  "listenedSeconds": "听了 {n} 秒",
+  "@listenedSeconds": {"placeholders": {"n": {"type": "int"}}},
+  "listenedMinutes": "听了 {n} 分钟",
+  "@listenedMinutes": {"placeholders": {"n": {"type": "int"}}},
+  "listenedHours": "听了 {h} 小时",
+  "@listenedHours": {"placeholders": {"h": {"type": "int"}}},
+  "listenedHoursMinutes": "听了 {h} 小时 {m} 分",
+  "@listenedHoursMinutes": {"placeholders": {"h": {"type": "int"}, "m": {"type": "int"}}},
+
+  "errorAuth": "网盘授权已失效，请重新登录",
+  "errorRateLimited": "请求过于频繁，请稍后再试",
+  "errorNotFound": "网盘中找不到该文件，可能已被移动或删除",
+  "errorNoMedia": "该文件夹下没有可识别的音频文件",
+  "errorNetwork": "网络连接不可用，请检查网络后重试",
+  "errorLinkExpired": "播放地址已过期，正在重新获取",
+  "errorStorageFull": "设备存储空间不足",
+  "errorPlaybackExhausted": "播放地址反复获取失败，请检查网络后重试",
+  "hintSlowNetwork": "网络较慢，反复缓冲。建议先下载本书再听。",
+
+  "notReadySourceMissing": "源文件在网盘里找不到了",
+  "notReadyEpisodesPending": "章节还在准备中",
+  "notReadyEpisodeGone": "这一章在网盘里已经找不到了",
+
+  "unitEpisode": "{kind, select, course{课} other{章}}",
+  "@unitEpisode": {"placeholders": {"kind": {"type": "String"}}},
+  "episodeOfTotal": "第 {index} / {total} {unit}",
+  "@episodeOfTotal": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}, "unit": {"type": "String"}}}
 }

@@ -3,9 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:yun_audiobook/app/providers.dart';
+import 'package:yun_audiobook/core/logging.dart';
 
-import '../../app/services.dart';
-import '../../core/logging.dart';
+part 'series_cover.g.dart';
 
 /// 封面文件的字节上限。封面本该是小图，真碰上几十 MB 的就放弃——
 /// 不值得为一张装饰图在限速账号上耗带宽。
@@ -16,8 +18,8 @@ const _maxCoverBytes = 4 * 1024 * 1024;
 /// 走 `readRange` 一次读完，而不是把 dlink 丢给 `Image.network`：
 /// dlink 有时效，过期后图片会变成一个静默失败的空白框，而封面小文件
 /// 读完就与网络无关了，之后随便重建多少次都不再请求。
-final coverBytesProvider =
-    FutureProvider.family<Uint8List?, String>((ref, fsId) async {
+@Riverpod(keepAlive: true)
+Future<Uint8List?> coverBytes(Ref ref, String fsId) async {
   final drive = ref.watch(servicesProvider).drive;
   try {
     final entry = (await drive.fetchMetadata([fsId]))[fsId];
@@ -27,14 +29,14 @@ final coverBytesProvider =
       return null;
     }
     return Uint8List.fromList(await drive.readRange(fsId, 0, entry.size - 1));
-  } catch (e) {
+  } on Object catch (e) {
     // 封面是纯装饰。取不到就用占位，绝不能让它影响加书或播放。
     Log.d('cover', '封面读取失败，改用占位：$e');
     return null;
   }
-});
+}
 
-/// 书籍封面。
+/// 合集封面。
 ///
 /// 网盘目录里有 cover / folder / front 之类的图片时显示真图（`coverFsId`
 /// 在认领时就扫出来存库了，之前一直没人渲染）；取不到时用「书名首字 +
@@ -43,8 +45,8 @@ final coverBytesProvider =
 /// 为什么占位不能是统一图标：书架靠封面区分书，一屏十几本全是同一个耳机
 /// 图标，等于没有封面。首字加配色至少保证每本书长得不一样，且同一本书在
 /// 任何设备、任何时候都是同一个颜色（哈希只取决于书名）。
-class BookCover extends ConsumerWidget {
-  const BookCover({
+class SeriesCover extends ConsumerWidget {
+  const SeriesCover({
     super.key,
     required this.title,
     required this.coverFsId,

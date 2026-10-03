@@ -1,49 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yun_audiobook/app/app.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/features/account/setup_required_page.dart';
 
-import 'app/services.dart';
-import 'core/config.dart';
-import 'ui/setup_required_screen.dart';
-import 'ui/root_screen.dart';
-
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 未配置 AppKey / OAuth 代理时，直接给出可执行的指引，
   // 而不是让用户面对一个点什么都没反应的登录页。
   if (!AppConfig.isConfigured) {
-    runApp(const _App(child: SetupRequiredScreen()));
+    runApp(const SetupApp(child: SetupRequiredPage()));
     return;
   }
 
-  final services = await AppServices.bootstrap();
-  runApp(ProviderScope(
-    overrides: [servicesProvider.overrideWithValue(services)],
-    child: const _App(child: RootScreen()),
-  ));
-}
-
-class _App extends StatelessWidget {
-  const _App({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '云听书',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF3F6B4F),
-        useMaterial3: true,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF3F6B4F),
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
-      home: child,
-    );
-  }
+  // 装配（令牌恢复、开库、AudioService.init）在 YunApp 里异步进行，
+  // 期间显示启动页，而不是在 runApp 之前白屏等待。
+  runApp(const ProviderScope(child: YunApp()));
 }
