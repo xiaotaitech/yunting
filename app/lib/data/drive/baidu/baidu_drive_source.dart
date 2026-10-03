@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-
-import '../../../core/config.dart';
-import '../../../core/errors.dart';
-import '../../../core/logging.dart';
-import '../cloud_drive_source.dart';
-import 'baidu_api_client.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/drive/baidu/baidu_api_client.dart';
+import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 
 /// 百度网盘的 [CloudDriveSource] 实现。
 ///
@@ -75,8 +74,8 @@ class BaiduDriveSource implements CloudDriveSource {
     }
     final dlink = (list.first as Map<String, dynamic>)['dlink'] as String?;
     if (dlink == null || dlink.isEmpty) {
-      throw DriveException(
-          DriveErrorKind.api, 'filemetas 未返回 dlink，请确认应用已开通下载权限');
+      throw const DriveException(
+          DriveErrorKind.api, 'filemetas 未返回 dlink，请确认应用已开通下载权限',);
     }
     return ResolvedMedia(
       url: await _api.authorizedUrl(dlink),
@@ -147,7 +146,7 @@ class BaiduDriveSource implements CloudDriveSource {
     );
     final uploadId = pre['uploadid'] as String?;
     if (uploadId == null) {
-      throw DriveException(DriveErrorKind.api, 'precreate 未返回 uploadid');
+      throw const DriveException(DriveErrorKind.api, 'precreate 未返回 uploadid');
     }
 
     await _api.uploadSlice(
@@ -175,7 +174,7 @@ class BaiduDriveSource implements CloudDriveSource {
   // ------------------------------------------------------- 内部
 
   Future<Map<String, dynamic>> _metas(List<String> fsIds,
-      {required bool wantDlink}) {
+      {required bool wantDlink,}) {
     return _api.getJson('/xpan/multimedia', {
       'method': 'filemetas',
       'fsids': jsonEncode(fsIds.map(int.parse).toList()),

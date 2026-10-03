@@ -46,3 +46,10 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# 代码生成产物不入库：CI 与本地都先跑 build_runner / gen-l10n
+*.g.dart
+*.freezed.dart
+/lib/l10n/gen/
+/lib/l10n/.base_keys.json
+/coverage/

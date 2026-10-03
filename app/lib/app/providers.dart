@@ -4,7 +4,6 @@
 /// 不再有手动 invalidate。写：走 features 里的 controller。
 library;
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/app_services.dart';
@@ -19,9 +18,9 @@ import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/domain/continue_listening.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
+import 'package:yun_audiobook/features/update/app_updater.dart';
 import 'package:yun_audiobook/playback/audio_service_bridge.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
-import 'package:yun_audiobook/update/app_updater.dart';
 
 part 'providers.g.dart';
 

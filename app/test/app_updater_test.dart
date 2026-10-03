@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:yun_audiobook/update/app_updater.dart';
+import 'package:yun_audiobook/features/update/app_updater.dart';
 
 void main() {
   test('版本号按数字段比较', () {
@@ -26,7 +26,7 @@ void main() {
 
   http.Response json(Object o, [int status = 200]) =>
       http.Response.bytes(utf8.encode(jsonEncode(o)), status,
-          headers: {'content-type': 'application/json; charset=utf-8'});
+          headers: {'content-type': 'application/json; charset=utf-8'},);
 
   final ghRelease = {
     'tag_name': 'v0.3.0',
@@ -35,7 +35,7 @@ void main() {
     'assets': [
       {
         'name': 'yunting-v0.3.0.apk',
-        'browser_download_url': 'https://x/yunting-v0.3.0.apk'
+        'browser_download_url': 'https://x/yunting-v0.3.0.apk',
       },
       {'name': 'yunting.apk', 'browser_download_url': 'https://x/yunting.apk'},
     ],
@@ -48,7 +48,7 @@ void main() {
   };
 
   AppUpdater updater(http.Response Function(Uri) handler,
-          {List<String> mirrors = const ['https://m/latest.json']}) =>
+          {List<String> mirrors = const ['https://m/latest.json'],}) =>
       AppUpdater(
         client: MockClient((req) async => handler(req.url)),
         repo: 'o/r',
@@ -59,7 +59,7 @@ void main() {
   test('取 GitHub 最新 Release 中固定名称的安装包', () async {
     final r = await updater((u) => u.path == '/repos/o/r/releases/latest'
         ? json(ghRelease)
-        : json({}, 404)).latest();
+        : json({}, 404),).latest();
     expect(r.version, '0.3.0');
     expect(r.apkUrls, ['https://x/yunting.apk']);
     expect(r.notes, '更新说明');
@@ -82,7 +82,7 @@ void main() {
 
   test('两边都可用且版本一致时合并下载地址，镜像在前', () async {
     final r = await updater(
-        (u) => u.host == 'api' ? json(ghRelease) : json(mirrorJson)).latest();
+        (u) => u.host == 'api' ? json(ghRelease) : json(mirrorJson),).latest();
     expect(r.pageUrl, 'https://gh/page');
     expect(r.apkUrls, ['https://cdn/yunting.apk', 'https://x/yunting.apk']);
   });
@@ -91,7 +91,7 @@ void main() {
     expect(
       updater((_) => json({}, 404)).latest(),
       throwsA(isA<UpdateException>()
-          .having((e) => e.message, 'message', '还没有发布版本')),
+          .having((e) => e.message, 'message', '还没有发布版本'),),
     );
   });
 }

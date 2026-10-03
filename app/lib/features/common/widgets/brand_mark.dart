@@ -16,11 +16,11 @@ abstract final class BrandMark {
     ..moveTo(38, 74)
     ..lineTo(70, 74)
     ..arcToPoint(const Offset(68.96, 52.05),
-        radius: const Radius.circular(11), largeArc: true, clockwise: false)
+        radius: const Radius.circular(11), largeArc: true, clockwise: false,)
     ..arcToPoint(const Offset(39.03, 50.04),
-        radius: const Radius.circular(15), largeArc: true, clockwise: false)
+        radius: const Radius.circular(15), largeArc: true, clockwise: false,)
     ..arcToPoint(const Offset(38, 74),
-        radius: const Radius.circular(12), largeArc: true, clockwise: false)
+        radius: const Radius.circular(12), largeArc: true, clockwise: false,)
     ..close();
 
   /// 四根音频条（左起 x、上沿、下沿），宽 4，两端圆头。
@@ -35,7 +35,7 @@ abstract final class BrandMark {
     final p = Path();
     for (final (x, top, bottom) in bars) {
       p.addRRect(
-          RRect.fromLTRBR(x, top, x + 4, bottom, const Radius.circular(2)));
+          RRect.fromLTRBR(x, top, x + 4, bottom, const Radius.circular(2)),);
     }
     return p;
   }
@@ -44,7 +44,7 @@ abstract final class BrandMark {
   /// [background] 为 false 时只画前景（透明底，登录页用）；
   /// [contentScale] 是前景占画布的比例：自适应图标 1.0，传统方形图标放大一些才不显小。
   static void paint(Canvas canvas, Size size,
-      {bool background = true, double contentScale = 1.0, Color? tint}) {
+      {bool background = true, double contentScale = 1.0, Color? tint,}) {
     if (background) {
       canvas.drawRect(Offset.zero & size, Paint()..color = green);
     }
@@ -55,7 +55,7 @@ abstract final class BrandMark {
     canvas.translate(-54, -55);
     canvas.drawPath(cloud(), Paint()..color = tint ?? white);
     canvas.drawPath(
-        barsPath(), Paint()..color = background ? green : (tint ?? green));
+        barsPath(), Paint()..color = background ? green : (tint ?? green),);
     canvas.restore();
   }
 }

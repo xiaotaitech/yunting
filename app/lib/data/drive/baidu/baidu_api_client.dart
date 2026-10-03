@@ -5,10 +5,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-import '../../../core/config.dart';
-import '../../../core/errors.dart';
-import '../../../core/logging.dart';
-import '../../auth/auth_repository.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/auth/auth_repository.dart';
 
 /// 百度网盘 HTTP 客户端。
 ///
@@ -115,7 +115,7 @@ class BaiduApiClient {
       final request = http.MultipartRequest('POST', uri)
         ..headers.addAll(_headers)
         ..files.add(http.MultipartFile.fromBytes('file', bytes,
-            filename: 'chunk'));
+            filename: 'chunk',),);
       final streamed = await request.send().timeout(const Duration(seconds: 60));
       final res = await http.Response.fromStream(streamed);
       Log.d('baidu', 'UPLOAD slice $partSeq -> ${res.statusCode}');
@@ -158,7 +158,7 @@ class BaiduApiClient {
     return builder.takeBytes();
   }
 
-  static final _tokenParam = RegExp(r'access_token=[^&]*');
+  static final _tokenParam = RegExp('access_token=[^&]*');
 
   /// 拼上当前令牌；地址里已有旧令牌时**替换**而不是追加。
   ///
@@ -183,7 +183,7 @@ class BaiduApiClient {
     final errorCode = json['error_code'];
     if (errorCode != null && errorCode != 0) {
       throw DriveException(DriveErrorKind.api,
-          '接口 $path 返回 error_code=$errorCode ${json['error_msg'] ?? ''}');
+          '接口 $path 返回 error_code=$errorCode ${json['error_msg'] ?? ''}',);
     }
   }
 

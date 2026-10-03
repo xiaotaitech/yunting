@@ -59,7 +59,7 @@ class TokenStore {
     if (raw == null) return null;
     try {
       return AuthToken.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-    } catch (_) {
+    } on Object catch (_) {
       // 存储损坏时当作未登录，而不是让应用起不来。
       await clear();
       return null;

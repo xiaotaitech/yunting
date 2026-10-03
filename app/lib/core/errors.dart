@@ -60,11 +60,11 @@ class DriveException implements Exception {
       case -6:
         return DriveException(DriveErrorKind.authInvalid,
             'errno=-6：授权无效或 scope 不是 basic,netdisk$where',
-            errno: errno);
+            errno: errno,);
       case 111:
         return DriveException(
             DriveErrorKind.authExpired, 'errno=111：access_token 失效$where',
-            errno: errno);
+            errno: errno,);
       // -9 是「文件或目录不存在」，-7 是「文件名错误或无权访问」，
       // 都跟令牌无关。之前把 -9 归成 authExpired，结果路径一旦对不上，
       // 就会白刷一次 token、再失败、最后对用户说「授权失效请重新登录」，
@@ -72,25 +72,25 @@ class DriveException implements Exception {
       case -9:
         return DriveException(
             DriveErrorKind.notFound, 'errno=-9：文件或目录不存在$where',
-            errno: errno);
+            errno: errno,);
       case -7:
         return DriveException(DriveErrorKind.notFound,
             'errno=-7：文件或目录名错误，或无权访问$where',
-            errno: errno);
+            errno: errno,);
       case 31034:
       case 31045:
         return DriveException(
             DriveErrorKind.rateLimited, 'errno=$errno：请求受限$where',
-            errno: errno);
+            errno: errno,);
       case 31062:
       case 31066:
         return DriveException(
             DriveErrorKind.notFound, 'errno=$errno：文件不存在$where',
-            errno: errno);
+            errno: errno,);
       default:
         return DriveException(
             DriveErrorKind.api, '百度接口返回 errno=$errno$where',
-            errno: errno);
+            errno: errno,);
     }
   }
 
@@ -99,11 +99,11 @@ class DriveException implements Exception {
     final where = context == null ? '' : '（$context）';
     if (status == 401) {
       return DriveException(
-          DriveErrorKind.authExpired, 'HTTP 401$where', errno: null);
+          DriveErrorKind.authExpired, 'HTTP 401$where',);
     }
     if (status == 403 || status == 410) {
       return DriveException(
-          DriveErrorKind.linkExpired, 'HTTP $status：播放地址已失效$where');
+          DriveErrorKind.linkExpired, 'HTTP $status：播放地址已失效$where',);
     }
     if (status == 404) {
       return DriveException(DriveErrorKind.notFound, 'HTTP 404$where');

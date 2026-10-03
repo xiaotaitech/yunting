@@ -88,30 +88,30 @@ void main() {
           'CREATE INDEX idx_history_last_at ON play_history(last_at DESC)',
         )
         ..execute(
-          "INSERT INTO play_history (book_id, chapter_id, chapter_index, "
-          "book_title, chapter_title, started_at, last_at, last_position_ms, "
+          'INSERT INTO play_history (book_id, chapter_id, chapter_index, '
+          'book_title, chapter_title, started_at, last_at, last_position_ms, '
           "listened_ms, finished) VALUES ('book-old', 'book-old-ch7', 7, "
           "'樊登讲书', '哲学的指引', 1500, 1900, 16000, 12000, 0)",
         );
     }
     db
       ..execute(
-        "INSERT INTO books (id, folder_path, title, chapter_count, "
-        "current_chapter_index, current_position_ms, order_edited, added_at, "
+        'INSERT INTO books (id, folder_path, title, chapter_count, '
+        'current_chapter_index, current_position_ms, order_edited, added_at, '
         "updated_at, last_played_at, updated_by_device) VALUES ('book-old', "
         "'/有声书/樊登讲书', '樊登讲书', 34, 7, 16000, 1, 1000, 2000, 1900, "
         "'dev-a')",
       )
       ..execute(
-        "INSERT INTO chapters (id, book_id, fs_id, path, title, file_name, "
-        "size, order_index, cache_state, local_path, downloaded_bytes) VALUES "
+        'INSERT INTO chapters (id, book_id, fs_id, path, title, file_name, '
+        'size, order_index, cache_state, local_path, downloaded_bytes) VALUES '
         "('book-old-ch7', 'book-old', 'fs-7', '/有声书/樊登讲书/哲学的指引.mp3', "
         "'哲学的指引', '哲学的指引.mp3', 46400000, 7, 3, '/data/cache/ch7.mp3', "
         '46400000)',
       )
       ..execute("INSERT INTO sync_meta VALUES ('last_sync_at', '2000')")
       ..userVersion = version
-      ..dispose();
+      ..close();
   }
 
   AppDatabase openCurrent() => AppDatabase(
@@ -134,7 +134,7 @@ void main() {
         .select('PRAGMA table_info($table)')
         .map((r) => r['name'] as String)
         .toSet();
-    db.dispose();
+    db.close();
     return cols;
   }
 
@@ -143,7 +143,7 @@ void main() {
     dbPath = p.join(dir.path, 'yun_audiobook.db');
   });
 
-  tearDown(() async => dir.delete(recursive: true));
+  tearDown(() => dir.delete(recursive: true));
 
   for (final from in [1, 2]) {
     group('v$from → v3', () {
@@ -223,6 +223,6 @@ void main() {
     await openAndClose();
     final db = sqlite3.open(dbPath);
     expect(db.userVersion, 3);
-    db.dispose();
+    db.close();
   });
 }

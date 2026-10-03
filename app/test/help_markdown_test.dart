@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yun_audiobook/ui/help/help_markdown.dart';
-import 'package:yun_audiobook/ui/help_screen.dart';
+import 'package:yun_audiobook/features/help/help_markdown.dart';
+import 'package:yun_audiobook/features/help/help_page.dart';
 
 void main() {
   test('解析标题、列表与段落，连续行合并成段', () {
@@ -19,7 +19,7 @@ void main() {
   test('行内粗体与网址，句末中文标点不算进链接', () {
     final spans = helpSpans('**下载**：打开 https://a.b/c.apk ；或 https://x.y/z。');
     expect(spans.map((s) => s.text).toList(),
-        ['下载', '：打开 ', 'https://a.b/c.apk', ' ；或 ', 'https://x.y/z', '。']);
+        ['下载', '：打开 ', 'https://a.b/c.apk', ' ；或 ', 'https://x.y/z', '。'],);
     expect(spans[0].bold, isTrue);
     expect(spans[2].url, isTrue);
     expect(spans[4].url, isTrue);

@@ -74,6 +74,7 @@ jobs:
             echo "DEMO=true" >> "$GITHUB_ENV"
           fi
           flutter pub get
+          dart run build_runner build -d
           flutter test
           # 只打 ARM：x86_64 只有模拟器用得到
           flutter build apk --release --target-platform android-arm,android-arm64 \

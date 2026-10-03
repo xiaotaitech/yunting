@@ -97,7 +97,7 @@ class DownloadManager {
     final part = File(p.join(dir.path, '${episode.fsId}.part'));
     if (part.existsSync()) part.deleteSync();
     await _dao.setCache(episode.id,
-        state: CacheState.none, downloadedBytes: 0);
+        state: CacheState.none, downloadedBytes: 0,);
   }
 
   Future<void> _pump() async {
@@ -121,7 +121,7 @@ class DownloadManager {
     final dir = await _seriesDir(episode.seriesId);
     final partFile = File(p.join(dir.path, '${episode.fsId}.part'));
     final finalFile = File(p.join(
-        dir.path, '${episode.fsId}${p.extension(episode.fileName)}'));
+        dir.path, '${episode.fsId}${p.extension(episode.fileName)}',),);
 
     if (finalFile.existsSync() && finalFile.lengthSync() == episode.size) {
       await _markCached(episode, finalFile);
@@ -176,7 +176,7 @@ class DownloadManager {
               lastReport = DateTime.now();
               await _dao.setCache(episode.id,
                   state: CacheState.downloading,
-                  downloadedBytes: task.received);
+                  downloadedBytes: task.received,);
             }
           }
         } finally {
@@ -206,7 +206,7 @@ class DownloadManager {
           return;
         }
         await Future<void>.delayed(Duration(milliseconds: 500 * attempt));
-      } catch (e) {
+      } on Object catch (e) {
         Log.d('download', '下载出错（第 $attempt 次）：$e');
         await Future<void>.delayed(Duration(milliseconds: 500 * attempt));
       }
@@ -218,7 +218,7 @@ class DownloadManager {
     await _dao.setCache(episode.id,
         state: CacheState.cached,
         localPath: file.path,
-        downloadedBytes: file.lengthSync());
+        downloadedBytes: file.lengthSync(),);
     Log.d('download', '已缓存：${episode.title}');
   }
 
@@ -236,10 +236,10 @@ class DownloadManager {
       // Dart 没有跨平台的可用空间 API，这里只做存在性与可写性的基本检查；
       // 真正的空间不足会在写入时抛 FileSystemException，由上层转成明确提示。
       if (stat.type == FileSystemEntityType.notFound) {
-        throw DriveException(DriveErrorKind.storageFull, '缓存目录不可用');
+        throw const DriveException(DriveErrorKind.storageFull, '缓存目录不可用');
       }
     } on FileSystemException {
-      throw DriveException(DriveErrorKind.storageFull, '设备存储空间不足');
+      throw const DriveException(DriveErrorKind.storageFull, '设备存储空间不足');
     }
   }
 
@@ -256,7 +256,7 @@ class DownloadManager {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
     for (final c in await _dao.episodesOf(seriesId)) {
       await _dao.setCache(c.id,
-          state: CacheState.none, downloadedBytes: 0);
+          state: CacheState.none, downloadedBytes: 0,);
     }
     Log.d('download', '已清理缓存：$seriesId');
   }

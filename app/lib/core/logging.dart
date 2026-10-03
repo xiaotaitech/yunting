@@ -9,8 +9,8 @@ class Log {
     return '${value.substring(0, 4)}***${value.substring(value.length - 4)}';
   }
 
-  static final _tokenParam = RegExp(r'(access_token=)[^&]+', caseSensitive: false);
-  static final _signParam = RegExp(r'(sign=)[^&]+', caseSensitive: false);
+  static final _tokenParam = RegExp('(access_token=)[^&]+', caseSensitive: false);
+  static final _signParam = RegExp('(sign=)[^&]+', caseSensitive: false);
 
   static String redactUrl(String url) => url
       .replaceAllMapped(_tokenParam, (m) => '${m[1]}***')

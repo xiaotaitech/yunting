@@ -81,6 +81,6 @@ class SleepTimer {
 
   void dispose() {
     _ticker?.cancel();
-    _controller.close();
+    unawaited(_controller.close());
   }
 }

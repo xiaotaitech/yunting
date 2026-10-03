@@ -11,6 +11,7 @@ import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/local/series_dao.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/domain/id3_parser.dart';
+import 'package:yun_audiobook/domain/media_files.dart';
 
 /// 由网盘路径派生出稳定的合集 ID。
 ///
@@ -56,14 +57,8 @@ class LibraryRepository {
 
   Future<List<DriveEntry>> browse(String path) => _drive.listDirectory(path);
 
-  /// 本变更只识别音频；视频识别在 add-video-courses 里加。
-  static MediaKind? mediaKindOf(DriveEntry e) {
-    if (e.isDirectory) return null;
-    if (AppConfig.audioExtensions.contains(e.extension)) return MediaKind.audio;
-    return null;
-  }
-
-  static bool isMedia(DriveEntry e) => mediaKindOf(e) != null;
+  /// 口径统一在 domain/media_files.dart，这里只是转发（测试与旧调用方用）。
+  static bool isMedia(DriveEntry e) => isMediaEntry(e);
 
   static bool isCoverImage(DriveEntry e) {
     if (e.isDirectory) return false;
@@ -80,7 +75,7 @@ class LibraryRepository {
     // 没有约定名的封面时，退而求其次用目录里唯一的图片
     final images = entries
         .where((e) =>
-            !e.isDirectory && AppConfig.imageExtensions.contains(e.extension))
+            !e.isDirectory && AppConfig.imageExtensions.contains(e.extension),)
         .toList();
 
     return FolderScan(
@@ -222,7 +217,7 @@ class LibraryRepository {
   /// 所以章节多时只探测前若干个——书名/作者取自首个文件就够了，
   /// 而 track 排序本来就要求全员齐备（见 [_buildEpisodes]），探不全时自然回退文件名。
   Future<Map<String, AudioTags>> _probeTags(List<DriveEntry> files,
-      {int maxProbe = 8}) async {
+      {int maxProbe = 8,}) async {
     final result = <String, AudioTags>{};
     final probe = files.take(maxProbe);
     for (final f in probe) {
@@ -234,7 +229,7 @@ class LibraryRepository {
         final bytes = await _drive.readRange(f.fsId, 0, upper);
         final tags = Id3Parser.parse(Uint8List.fromList(bytes));
         if (!tags.isEmpty) result[f.fsId] = tags;
-      } catch (e) {
+      } on Object catch (e) {
         Log.d('library', '读取标签失败（忽略）：${f.name} :: $e');
       }
     }

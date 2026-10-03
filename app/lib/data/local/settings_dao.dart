@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-import 'database.dart';
+import 'package:yun_audiobook/data/local/database.dart';
 
 part 'settings_dao.g.dart';
 

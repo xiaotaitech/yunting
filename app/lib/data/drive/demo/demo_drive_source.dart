@@ -6,9 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../../core/errors.dart';
-import '../../../core/logging.dart';
-import '../cloud_drive_source.dart';
+import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 
 /// 演示用的假网盘（design.md D9 的第二个 driver）。
 ///

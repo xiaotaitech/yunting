@@ -9,7 +9,7 @@ import 'package:yun_audiobook/features/common/widgets/brand_mark.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
 const _locales = [Locale('zh')];
-const _delegates = [
+const List<LocalizationsDelegate<Object>> _delegates = [
   AppLocalizations.delegate,
   GlobalMaterialLocalizations.delegate,
   GlobalWidgetsLocalizations.delegate,

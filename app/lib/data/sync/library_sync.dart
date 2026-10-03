@@ -58,8 +58,9 @@ class LibrarySync {
     try {
       final local = await _localSnapshot();
       final remote = await _readRemote();
-      final merged =
-          remote == null ? local : mergeSnapshots(local, remote);
+      final merged = remote == null
+          ? local
+          : _keepLocalKinds(mergeSnapshots(local, remote), local);
 
       await _applySnapshot(merged);
       await _drive.writeAppStateFile(
@@ -77,7 +78,7 @@ class LibrarySync {
       Log.d('sync', '同步失败，稍后重试：${e.message}');
       markDirty();
       return false;
-    } catch (e) {
+    } on Object catch (e) {
       Log.d('sync', '同步失败，稍后重试：$e');
       markDirty();
       return false;
@@ -97,12 +98,30 @@ class LibrarySync {
     if (raw == null || raw.trim().isEmpty) return null;
     try {
       return LibrarySnapshot.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>);
-    } catch (e) {
+          jsonDecode(raw) as Map<String, dynamic>,);
+    } on Object catch (e) {
       // 远端文件损坏时不能让同步永久卡死，本地照常运行、下次覆盖它
       Log.e('sync', '远端状态文件无法解析，将以本地为准', e);
       return null;
     }
+  }
+
+  /// 合集类型以本地为准再写回网盘。
+  ///
+  /// 旧版本 App 上传的记录不带 kind（解析成默认的有声书），而它的时间戳
+  /// 往往更新、会在 LWW 里胜出——不纠正的话，一门课被旧设备同步一次，
+  /// 上传回去的 library.json 里就变回了有声书，别的新设备再拉就拿错了类型。
+  static LibrarySnapshot _keepLocalKinds(
+    LibrarySnapshot merged,
+    LibrarySnapshot local,
+  ) {
+    final kinds = {for (final b in local.books) b.id: b.kind};
+    return merged.copyWith(
+      books: [
+        for (final b in merged.books)
+          b.copyWith(kind: kinds[b.id] ?? b.kind),
+      ],
+    );
   }
 
   Future<LibrarySnapshot> _localSnapshot() async {

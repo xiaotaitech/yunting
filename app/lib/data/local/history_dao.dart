@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
-
-import '../../domain/entities.dart';
-import 'database.dart';
+import 'package:yun_audiobook/data/local/database.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 part 'history_dao.g.dart';
 
@@ -102,7 +101,7 @@ class HistoryDao extends DatabaseAccessor<AppDatabase> with _$HistoryDaoMixin {
 
         // 只在插入时裁剪，更新时不必每 5 秒扫一遍表
         await customStatement(
-          'DELETE FROM play_history WHERE id NOT IN ('
+          'DELETE FROM play_history WHERE id NOT IN ( '
           'SELECT id FROM play_history ORDER BY last_at DESC, id DESC LIMIT ?)',
           [maxEntries],
         );

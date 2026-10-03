@@ -52,7 +52,7 @@ void main() {
         '/书/第1卷/a.mp3',
       ]);
       expect(result.map(parentDirOf).map((d) => d.split('/').last).toList(),
-          ['第1卷', '第2卷', '第10卷']);
+          ['第1卷', '第2卷', '第10卷'],);
     });
 
     test('同一子目录内仍按文件名自然序', () {

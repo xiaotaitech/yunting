@@ -3,11 +3,11 @@
 class AppConfig {
   /// 百度网盘开放平台的 AppKey（client_id）。仅 AppKey，绝无 SecretKey。
   static const String baiduAppKey =
-      String.fromEnvironment('BAIDU_APP_KEY', defaultValue: '');
+      String.fromEnvironment('BAIDU_APP_KEY');
 
   /// OAuth 代理基址，例如 http://192.168.1.10:8787
   static const String oauthProxyBase =
-      String.fromEnvironment('OAUTH_PROXY_BASE', defaultValue: '');
+      String.fromEnvironment('OAUTH_PROXY_BASE');
 
   /// 演示模式：用本地假数据源替代百度网盘，跳过授权。
   ///
@@ -16,7 +16,7 @@ class AppConfig {
   /// 它同时也是 `CloudDriveSource` 抽象（design.md D9）的第一个非百度实现，
   /// 顺带证明了那层抽象确实是可替换的。
   static const bool demoMode =
-      bool.fromEnvironment('DEMO_MODE', defaultValue: false);
+      bool.fromEnvironment('DEMO_MODE');
 
   /// 网盘中存放同步状态的应用专属目录（design.md D5）。
   static const String appFolderName = 'yun_audiobook';
@@ -32,7 +32,7 @@ class AppConfig {
   /// 本项目的开源仓库，同时也是发布渠道：应用内检查更新读它的 Releases 与 dist 分支的 latest.json
   /// （app-distribution 规格）。fork 后自己发版时，发布工作流会把仓库名传进来。
   static const String releaseRepo = String.fromEnvironment('RELEASE_REPO',
-      defaultValue: 'xiaotaitech/yunting');
+      defaultValue: 'xiaotaitech/yunting',);
 
   static const List<String> audioExtensions = [
     'mp3', 'm4a', 'm4b', 'aac', 'flac', 'ogg', 'wav', 'wma', 'opus',
@@ -48,7 +48,7 @@ class AppConfig {
       demoMode || (baiduAppKey.isNotEmpty && oauthProxyBase.isNotEmpty);
 
   /// 未配置时给出可执行的指引，而不是让应用静默失败。
-  static const String setupHint = '''
+  static const String setupHint = r'''
 应用尚未配置百度网盘凭证。
 
 1. 到 https://pan.baidu.com/union/console 登录百度账号 → 实名认证 → 创建应用（选软件类别）
@@ -56,8 +56,8 @@ class AppConfig {
 2. 在 tools/.env 填入这两个值，运行 `npm run proxy` 启动 OAuth 代理
 3. 用下面的方式重新构建 App（把 IP 换成运行代理的那台机器的局域网地址）：
 
-   flutter run \\
-     --dart-define=BAIDU_APP_KEY=你的AppKey \\
+   flutter run \
+     --dart-define=BAIDU_APP_KEY=你的AppKey \
      --dart-define=OAUTH_PROXY_BASE=http://192.168.x.x:8787
 
 还没申请到 AppKey？可以先用演示模式把完整流程走一遍：

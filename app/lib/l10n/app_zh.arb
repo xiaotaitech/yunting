@@ -1,43 +1,110 @@
 {
   "@@locale": "zh",
   "appName": "云听书",
-
   "navShelf": "书架",
   "navHistory": "历史",
   "navMine": "我的",
-
   "actionCancel": "取消",
   "actionConfirm": "确定",
   "actionRetry": "重试",
   "actionDelete": "删除",
-
   "splashLoading": "正在准备…",
   "bootstrapFailed": "启动失败：{detail}",
-  "@bootstrapFailed": {"placeholders": {"detail": {"type": "String"}}},
-
+  "@bootstrapFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "timeJustNow": "刚刚",
   "timeMinutesAgo": "{n} 分钟前",
-  "@timeMinutesAgo": {"placeholders": {"n": {"type": "int"}}},
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeTodayAt": "今天 {hm}",
-  "@timeTodayAt": {"placeholders": {"hm": {"type": "String"}}},
+  "@timeTodayAt": {
+    "placeholders": {
+      "hm": {
+        "type": "String"
+      }
+    }
+  },
   "timeDaysAgo": "{n} 天前",
-  "@timeDaysAgo": {"placeholders": {"n": {"type": "int"}}},
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "dayToday": "今天",
   "dayYesterday": "昨天",
   "dayThisYear": "{month} 月 {day} 日",
-  "@dayThisYear": {"placeholders": {"month": {"type": "String"}, "day": {"type": "String"}}},
+  "@dayThisYear": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "dayOtherYear": "{year} 年 {month} 月 {day} 日",
-  "@dayOtherYear": {"placeholders": {"year": {"type": "int"}, "month": {"type": "String"}, "day": {"type": "String"}}},
+  "@dayOtherYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "listenedJustStarted": "刚开始",
   "listenedSeconds": "听了 {n} 秒",
-  "@listenedSeconds": {"placeholders": {"n": {"type": "int"}}},
+  "@listenedSeconds": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "listenedMinutes": "听了 {n} 分钟",
-  "@listenedMinutes": {"placeholders": {"n": {"type": "int"}}},
+  "@listenedMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "listenedHours": "听了 {h} 小时",
-  "@listenedHours": {"placeholders": {"h": {"type": "int"}}},
+  "@listenedHours": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      }
+    }
+  },
   "listenedHoursMinutes": "听了 {h} 小时 {m} 分",
-  "@listenedHoursMinutes": {"placeholders": {"h": {"type": "int"}, "m": {"type": "int"}}},
-
+  "@listenedHoursMinutes": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  },
   "errorAuth": "网盘授权已失效，请重新登录",
   "errorRateLimited": "请求过于频繁，请稍后再试",
   "errorNotFound": "网盘中找不到该文件，可能已被移动或删除",
@@ -47,13 +114,488 @@
   "errorStorageFull": "设备存储空间不足",
   "errorPlaybackExhausted": "播放地址反复获取失败，请检查网络后重试",
   "hintSlowNetwork": "网络较慢，反复缓冲。建议先下载本书再听。",
-
   "notReadySourceMissing": "源文件在网盘里找不到了",
   "notReadyEpisodesPending": "章节还在准备中",
   "notReadyEpisodeGone": "这一章在网盘里已经找不到了",
-
   "unitEpisode": "{kind, select, course{课} other{章}}",
-  "@unitEpisode": {"placeholders": {"kind": {"type": "String"}}},
+  "@unitEpisode": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "episodeOfTotal": "第 {index} / {total} {unit}",
-  "@episodeOfTotal": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}, "unit": {"type": "String"}}}
+  "@episodeOfTotal": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfAdd": "添加书籍",
+  "shelfSync": "同步",
+  "shelfSyncing": "正在同步",
+  "shelfSyncDone": "同步完成，书架 {count} 本",
+  "@shelfSyncDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfSyncFailed": "同步失败，稍后会自动重试",
+  "shelfEmptyTitle": "书架还是空的",
+  "shelfEmptyDescription": "点右下角「添加书籍」，从你的百度网盘里挑一个装着有声书的文件夹加进来。",
+  "shelfContinue": "继续收听",
+  "shelfContinueRestart": "已听完 · 点击从第一{unit}重新开始",
+  "@shelfContinueRestart": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfContinueListenedTo": "{title} · 已听到 {position}",
+  "@shelfContinueListenedTo": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfContinueProgress": "{title} · {position} / {total}",
+  "@shelfContinueProgress": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfPendingEpisodes": "章节待解析",
+  "shelfFinished": "已听完 · 共 {count} {unit}",
+  "@shelfFinished": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfNotStarted": "未开始 · 共 {count} {unit}",
+  "@shelfNotStarted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfSourceMissing": "源文件不可用",
+  "detailReorder": "手动排序",
+  "detailReorderDone": "完成排序",
+  "detailMenuEdit": "编辑书籍信息",
+  "detailMenuRefresh": "刷新章节",
+  "detailMenuDownload": "下载本书",
+  "detailMenuClear": "清理离线缓存",
+  "detailMenuRemove": "移出书架",
+  "detailRefreshed": "章节已刷新",
+  "detailRefreshFailed": "刷新失败，请稍后重试",
+  "detailDownloadQueued": "已加入下载队列（{count} {unit}）",
+  "@detailDownloadQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "detailCacheCleared": "离线缓存已清理，收听进度保留",
+  "detailRemoveBody": "只会删除本地的书架条目与离线缓存，你网盘里的原始文件不会被动。",
+  "detailRemoveConfirm": "移出",
+  "detailEditTitleLabel": "书名",
+  "detailEditAuthorLabel": "作者",
+  "detailSave": "保存",
+  "detailSummary": "{count} {unit} · {size}",
+  "@detailSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "detailOfflineCount": "已离线 {cached} / {total} {unit}",
+  "@detailOfflineCount": {
+    "placeholders": {
+      "cached": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "detailSourceMissing": "源文件不可用：网盘中找不到该文件夹",
+  "detailCachedSize": "已离线 · {size}",
+  "@detailCachedSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "detailDownloading": "下载中 {percent}%",
+  "@detailDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "detailQueued": "排队中",
+  "detailFailed": "下载失败，点右侧重试",
+  "detailCachedTooltip": "已离线",
+  "detailCancelDownload": "取消下载",
+  "detailDownloadEpisode": "下载此{unit}",
+  "@detailDownloadEpisode": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "browseRootName": "我的网盘",
+  "browseHintAudio": "本文件夹有 {count} 个音频文件",
+  "@browseHintAudio": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browseHintLibrary": "这里有 {count} 个子文件夹，看起来是个书库。建议点进去逐本添加——合成一本会把它们串成一长串。",
+  "@browseHintLibrary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browseHintFolders": "本文件夹没有音频，{count} 个子文件夹可以合成一本书",
+  "@browseHintFolders": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browseHintNone": "本文件夹没有可识别的音频文件",
+  "browseAlreadyOnShelf": "《{title}》已在书架中",
+  "@browseAlreadyOnShelf": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "browseView": "查看",
+  "browseClaim": "加入书架",
+  "browseClaimAnyway": "仍要合成一本",
+  "browseBusy": "处理中…",
+  "browseAdded": "已加入书架：《{title}》（{count} {unit}）",
+  "@browseAdded": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "browseEmptyFolder": "这个文件夹是空的",
+  "historyTitle": "播放历史",
+  "historyClearTooltip": "清空历史",
+  "historyEmptyTitle": "还没有收听记录",
+  "historyEmptyDescription": "听过的章节会按时间记在这里，随时能回来接着听。记录只存在这台设备上，不会同步到网盘。",
+  "historyClearTitle": "清空播放历史",
+  "historyClearBody": "只清除收听记录。书架、收听进度与离线缓存都不受影响。",
+  "historyClearConfirm": "清空",
+  "historyFinished": "听完",
+  "historyNotOnShelf": "这本书已不在书架，无法继续播放",
+  "mineGroupListen": "收听",
+  "mineSyncNow": "立即同步",
+  "mineNeverSynced": "尚未同步过 · 状态存于网盘 {dir}",
+  "@mineNeverSynced": {
+    "placeholders": {
+      "dir": {
+        "type": "String"
+      }
+    }
+  },
+  "mineLastSync": "上次同步：{time}",
+  "@mineLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "mineSyncDone": "同步完成",
+  "mineSyncFailed": "同步失败，稍后会自动重试",
+  "mineGroupPlayback": "播放",
+  "mineResumeTitle": "中断后自动恢复播放",
+  "mineResumeSubtitle": "来电等打断结束后自动继续，关闭则保持暂停",
+  "mineGroupAbout": "关于",
+  "mineCheckUpdate": "检查更新",
+  "mineChecking": "正在检查…",
+  "mineCurrentVersion": "当前版本 {version}",
+  "@mineCurrentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "mineHelp": "使用帮助",
+  "minePrivacy": "隐私说明",
+  "mineDiagnostics": "诊断信息",
+  "mineDiagnosticsSubtitle": "排查连接问题时才需要",
+  "mineOAuthProxy": "OAuth 代理",
+  "mineNotConfigured": "未配置",
+  "mineAppKey": "AppKey",
+  "mineUpdateSource": "更新来源",
+  "mineGroupAccount": "账号",
+  "mineSignOut": "退出登录",
+  "mineSignOutSubtitle": "本地书架与收听进度会保留",
+  "mineSignOutBody": "将清除本机保存的网盘授权。书架与收听进度会保留，重新登录后即可继续。",
+  "mineSignOutConfirm": "退出",
+  "mineFooter": "{appName}{version} · 只访问你本人网盘中的文件",
+  "@mineFooter": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "mineOffline": "离线管理",
+  "mineOfflineQueued": "下载中 · 队列 {n} {unit}",
+  "@mineOfflineQueued": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "mineOfflineUsage": "已用 {used} / 上限 {quota} GB",
+  "@mineOfflineUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "quota": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineTitle": "离线管理",
+  "offlineQueue": "队列 {n}",
+  "@offlineQueue": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineResumeDownloads": "继续下载",
+  "offlinePauseDownloads": "暂停下载",
+  "offlineQuotaTitle": "缓存上限",
+  "offlineQuotaHint": "超出后按最近最少收听自动清理，正在播放的书不会被清",
+  "offlineGb": "{n} GB",
+  "@offlineGb": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineQuotaOf": "/ {n} GB",
+  "@offlineQuotaOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineEmptyTitle": "还没有下载任何章节",
+  "offlineEmptyDescription": "在书籍详情页菜单里选「下载本书」，或点单章右侧的下载按钮，之后断网也能听。",
+  "offlineClearTooltip": "清理这本书的缓存",
+  "offlineCleared": "缓存已清理，收听进度保留",
+  "loginTagline": "把你自己百度网盘里的有声书\n变成一个真正好用的听书 App",
+  "loginPrompt": "请在浏览器完成授权",
+  "loginOpenBrowser": "打开授权页",
+  "loginCopyCode": "复制用户码",
+  "loginWaiting": "等待授权中…",
+  "loginBusy": "授权进行中…",
+  "loginAuthorize": "授权百度网盘",
+  "loginPrivacy": "本应用只读取你本人网盘中的文件，不会上传音频，也不提供任何分享或他人资源访问功能。",
+  "loginRestored": "已从网盘恢复 {n} 本书",
+  "@loginRestored": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupTitle": "需要先完成配置",
+  "setupMissing": "尚未注入百度网盘 AppKey 与 OAuth 代理地址，应用无法访问网盘。",
+  "setupCopy": "复制配置步骤",
+  "helpTitle": "使用帮助",
+  "updateFound": "发现新版本 {version}",
+  "@updateFound": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCurrent": "当前版本 {version}",
+  "@updateCurrent": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateDownloading": "正在下载，可在通知栏查看进度；下载完成后会自动打开安装界面。",
+  "updateBlocked": "安装被拦截？查看各品牌手机的安装说明",
+  "updateBackground": "后台下载",
+  "updateLater": "以后再说",
+  "updateDownload": "下载更新",
+  "updateDownloadFailed": "无法开始下载，请稍后重试",
+  "updateLatest": "已是最新版本",
+  "updateCheckFailed": "检查失败：{detail}",
+  "@updateCheckFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCheckFailedNetwork": "检查失败：网络错误",
+  "playerNothingPlaying": "还没有正在播放的书",
+  "playerOffline": "已离线",
+  "playerSpeedTitle": "播放速度",
+  "playerSleepTitle": "睡眠定时",
+  "playerSleepLabel": "定时",
+  "playerSleepEndOfEpisodeShort": "本{unit}后停",
+  "@playerSleepEndOfEpisodeShort": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSleepMinutes": "{minutes} 分钟后停止",
+  "@playerSleepMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "playerSleepEndOfEpisode": "播完本{unit}后停止",
+  "@playerSleepEndOfEpisode": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSleepCancel": "取消定时",
+  "playerEpisodes": "{kind, select, course{课程} other{章节}}",
+  "@playerEpisodes": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "playerEpisodesTitle": "{kind, select, course{课程} other{章节}} · 共 {total} {unit}",
+  "@playerEpisodesTitle": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "playerRewind": "快退 15 秒",
+  "playerForward": "快进 15 秒",
+  "playerPlay": "播放",
+  "playerPause": "暂停",
+  "playerNext": "下一{unit}",
+  "@playerNext": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "playerDownloadSeries": "下载本书",
+  "playerDownloadQueued": "已加入下载队列（{count} {unit}）",
+  "@playerDownloadQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  }
 }

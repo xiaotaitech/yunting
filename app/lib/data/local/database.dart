@@ -6,10 +6,10 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-import '../../core/config.dart';
-import 'history_dao.dart';
-import 'series_dao.dart';
-import 'settings_dao.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/data/local/history_dao.dart';
+import 'package:yun_audiobook/data/local/series_dao.dart';
+import 'package:yun_audiobook/data/local/settings_dao.dart';
 
 part 'database.g.dart';
 
@@ -104,7 +104,7 @@ class SyncMeta extends Table {
 ///    书名也可能被用户改掉。历史要记的是「当时听的是什么」。
 @DataClassName('HistoryRow')
 @TableIndex.sql(
-    'CREATE INDEX idx_history_last_at ON play_history(last_at DESC)')
+    'CREATE INDEX idx_history_last_at ON play_history(last_at DESC)',)
 class PlayHistory extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get bookId => text()();

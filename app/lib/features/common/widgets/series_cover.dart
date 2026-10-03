@@ -11,7 +11,7 @@ part 'series_cover.g.dart';
 
 /// 封面文件的字节上限。封面本该是小图，真碰上几十 MB 的就放弃——
 /// 不值得为一张装饰图在限速账号上耗带宽。
-const _maxCoverBytes = 4 * 1024 * 1024;
+const int _maxCoverBytes = 4 * 1024 * 1024;
 
 /// 封面字节，按 fsId 缓存，一次会话只从网盘取一次。
 ///
@@ -47,11 +47,7 @@ Future<Uint8List?> coverBytes(Ref ref, String fsId) async {
 /// 任何设备、任何时候都是同一个颜色（哈希只取决于书名）。
 class SeriesCover extends ConsumerWidget {
   const SeriesCover({
-    super.key,
-    required this.title,
-    required this.coverFsId,
-    required this.width,
-    required this.height,
+    required this.title, required this.coverFsId, required this.width, required this.height, super.key,
     this.radius = 10,
   });
 
@@ -106,11 +102,9 @@ class _Placeholder extends StatelessWidget {
     final hue = (_stableHash(title) % 360).toDouble();
 
     // 饱和度压低、明度拉开，保证首字和底色在两种主题下都够对比。
-    final bg = HSLColor.fromAHSL(
-            1, hue, dark ? 0.30 : 0.38, dark ? 0.26 : 0.84)
+    final bg = HSLColor.fromAHSL(1, hue, dark ? 0.30 : 0.38, dark ? 0.26 : 0.84)
         .toColor();
-    final fg = HSLColor.fromAHSL(
-            1, hue, dark ? 0.50 : 0.55, dark ? 0.84 : 0.30)
+    final fg = HSLColor.fromAHSL(1, hue, dark ? 0.50 : 0.55, dark ? 0.84 : 0.30)
         .toColor();
 
     return Container(

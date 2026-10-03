@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// 与 BaiduApiClient._appendToken 保持同一份实现，用于验证令牌拼接规则。
 /// （私有方法无法直接测，这里复刻逻辑并锁死行为；改动任何一边都要同步。）
-final _tokenParam = RegExp(r'access_token=[^&]*');
+final _tokenParam = RegExp('access_token=[^&]*');
 
 String appendToken(String dlink, String token) {
   final encoded = Uri.encodeComponent(token);
@@ -18,12 +18,12 @@ void main() {
   group('dlink 令牌拼接', () {
     test('无 query 时用 ? 起头', () {
       expect(appendToken('https://d.pcs.baidu.com/file/abc', 't1'),
-          'https://d.pcs.baidu.com/file/abc?access_token=t1');
+          'https://d.pcs.baidu.com/file/abc?access_token=t1',);
     });
 
     test('已有 query 时用 & 追加', () {
       expect(appendToken('https://d.pcs.baidu.com/file/abc?fid=9', 't1'),
-          'https://d.pcs.baidu.com/file/abc?fid=9&access_token=t1');
+          'https://d.pcs.baidu.com/file/abc?fid=9&access_token=t1',);
     });
 
     test('已带令牌时替换而不是追加，避免出现两个 access_token', () {

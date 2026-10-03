@@ -56,7 +56,7 @@ void main() {
         ..sort(compareNatural);
 
       expect(browseOrder, chapterOrder,
-          reason: '同一批文件在两个界面必须是同一个顺序');
+          reason: '同一批文件在两个界面必须是同一个顺序',);
     });
   });
 }

@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
-
-import '../../domain/entities.dart';
-import 'database.dart';
+import 'package:yun_audiobook/data/local/database.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 part 'series_dao.g.dart';
 

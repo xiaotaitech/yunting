@@ -19,7 +19,7 @@ class Id3Parser {
     try {
       final v2 = _parseV2(bytes);
       if (v2 != null && !v2.isEmpty) return v2;
-    } catch (_) {
+    } on Object catch (_) {
       // 标签损坏不该影响加书流程
     }
     return AudioTags.empty;
@@ -35,7 +35,10 @@ class Id3Parser {
     final tagSize = _syncSafe(b, 6);
     final end = (10 + tagSize).clamp(0, b.length);
 
-    String? title, album, artist, track;
+    String? title;
+    String? album;
+    String? artist;
+    String? track;
     var offset = 10;
     final idLength = major == 2 ? 3 : 4;
     final sizeLength = major == 2 ? 3 : 4;
@@ -66,19 +69,15 @@ class Id3Parser {
         case 'TIT2':
         case 'TT2':
           title = _decodeText(data);
-          break;
         case 'TALB':
         case 'TAL':
           album = _decodeText(data);
-          break;
         case 'TPE1':
         case 'TP1':
           artist = _decodeText(data);
-          break;
         case 'TRCK':
         case 'TRK':
           track = _decodeText(data);
-          break;
       }
       offset = dataEnd;
     }
@@ -130,7 +129,7 @@ class Id3Parser {
     for (var i = 0; i + 1 < data.length; i += 2) {
       units.add(littleEndian
           ? data[i] | (data[i + 1] << 8)
-          : (data[i] << 8) | data[i + 1]);
+          : (data[i] << 8) | data[i + 1],);
     }
     return String.fromCharCodes(units);
   }

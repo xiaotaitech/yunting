@@ -19,7 +19,7 @@ class PlaybackUrlResolver {
   ///
   /// [forceRefresh] 用于播放中断后的恢复：作废旧地址并强制重取。
   Future<ResolvedMedia> resolve(Episode episode,
-      {bool forceRefresh = false}) async {
+      {bool forceRefresh = false,}) async {
     // 本地缓存优先（offline-cache 规格「本地缓存优先」）
     final local = episode.localPath;
     if (episode.isCached && local != null && File(local).existsSync()) {
@@ -57,7 +57,7 @@ class PlaybackUrlResolver {
     try {
       _cache[episode.fsId] = await _drive.resolveMedia(episode.fsId);
       Log.d('resolver', '已预取下一章地址：${episode.title}');
-    } catch (e) {
+    } on Object catch (e) {
       // 预取失败无所谓，真正播放时会再解析一次
       Log.d('resolver', '预取失败（忽略）：$e');
     }

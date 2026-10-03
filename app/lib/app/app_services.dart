@@ -54,7 +54,7 @@ class AppServices {
     final database = AppDatabase.open();
 
     // 演示模式换掉数据源，其余各层一行不用改——这正是 CloudDriveSource 抽象的用处
-    final CloudDriveSource drive = AppConfig.demoMode
+    final drive = AppConfig.demoMode
         ? DemoDriveSource()
         : BaiduDriveSource(BaiduApiClient(auth));
 
@@ -91,7 +91,6 @@ class AppServices {
         androidNotificationOngoing: true,
         // 自己的通知栏图标（res/drawable/ic_stat_yun.xml），不用默认的启动图标
         androidNotificationIcon: 'drawable/ic_stat_yun',
-        androidStopForegroundOnPause: true,
       ),
     );
     await bridge.configureAudioSession();

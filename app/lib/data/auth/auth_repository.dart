@@ -3,10 +3,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../core/config.dart';
-import '../../core/errors.dart';
-import '../../core/logging.dart';
-import 'token_store.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/auth/token_store.dart';
 
 /// 设备码授权的进行中状态。设备码流程不需要回调域名，
 /// 是移动端与本地联调最省事的路径。
@@ -79,7 +79,7 @@ class AuthRepository {
   Future<String> accessToken() async {
     final token = _cached ??= await _store.read();
     if (token == null) {
-      throw DriveException(DriveErrorKind.authInvalid, '尚未授权百度网盘');
+      throw const DriveException(DriveErrorKind.authInvalid, '尚未授权百度网盘');
     }
     if (!token.isExpiring) return token.accessToken;
     final refreshed = await refresh();
@@ -96,15 +96,15 @@ class AuthRepository {
   Future<AuthToken> _doRefresh() async {
     final current = _cached ?? await _store.read();
     if (current == null || current.refreshToken.isEmpty) {
-      await signOut(keepLocalData: true);
-      throw DriveException(DriveErrorKind.authInvalid, '缺少 refresh_token，需要重新授权');
+      await signOut();
+      throw const DriveException(DriveErrorKind.authInvalid, '缺少 refresh_token，需要重新授权');
     }
     final res = await _post('/oauth/refresh', {'refresh_token': current.refreshToken});
     if (res == null) {
       // refresh_token 本身失效：清凭证、跳登录，但本地书架与进度必须保留
       // （netdisk-auth 规格「refresh_token 失效」）。
-      await signOut(keepLocalData: true);
-      throw DriveException(DriveErrorKind.authInvalid, 'refresh_token 已失效，请重新授权');
+      await signOut();
+      throw const DriveException(DriveErrorKind.authInvalid, 'refresh_token 已失效，请重新授权');
     }
     final token = AuthToken.fromResponse(res);
     // 百度刷新响应里可能不带新的 refresh_token，此时沿用旧的。
@@ -127,7 +127,7 @@ class AuthRepository {
   Future<DeviceAuthSession> startDeviceAuth() async {
     final res = await _post('/oauth/device/start', const {});
     if (res == null) {
-      throw DriveException(DriveErrorKind.api, 'OAuth 代理未能发起设备码授权');
+      throw const DriveException(DriveErrorKind.api, 'OAuth 代理未能发起设备码授权');
     }
     return DeviceAuthSession(
       deviceCode: res['device_code'] as String,
@@ -162,16 +162,15 @@ class AuthRepository {
           return token;
         case 'slow_down':
           interval += const Duration(seconds: 2);
-          break;
         case 'denied':
-          throw DriveException(DriveErrorKind.authInvalid, '你在授权页拒绝了本次授权');
+          throw const DriveException(DriveErrorKind.authInvalid, '你在授权页拒绝了本次授权');
         case 'expired':
-          throw DriveException(DriveErrorKind.authInvalid, '授权码已过期，请重新发起授权');
+          throw const DriveException(DriveErrorKind.authInvalid, '授权码已过期，请重新发起授权');
         default:
           break; // authorization_pending：继续等
       }
     }
-    throw DriveException(DriveErrorKind.network, '等待授权超时，请重新发起');
+    throw const DriveException(DriveErrorKind.network, '等待授权超时，请重新发起');
   }
 
   /// 退出登录。默认保留本地书架与进度——用户退出登录不等于要丢数据。
@@ -184,13 +183,13 @@ class AuthRepository {
 
   Future<Map<String, dynamic>?> _post(String path, Map<String, dynamic> body) async {
     if (_proxyBase.isEmpty) {
-      throw DriveException(DriveErrorKind.api, 'OAuth 代理地址未配置');
+      throw const DriveException(DriveErrorKind.api, 'OAuth 代理地址未配置');
     }
     try {
       final res = await _http
           .post(_proxy(path),
               headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode(body))
+              body: jsonEncode(body),)
           .timeout(const Duration(seconds: 20));
       // 只记录路径与状态码，绝不记录响应体（含令牌）。
       Log.d('auth', 'POST $path -> ${res.statusCode}');
@@ -204,9 +203,9 @@ class AuthRepository {
       return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     } on DriveException {
       rethrow;
-    } catch (e) {
+    } on Object catch (e) {
       throw DriveException(
-          DriveErrorKind.network, '无法连接 OAuth 代理（$_proxyBase）：$e');
+          DriveErrorKind.network, '无法连接 OAuth 代理（$_proxyBase）：$e',);
     }
   }
 
@@ -221,14 +220,14 @@ class AuthRepository {
           return 'OAuth 代理：$message';
         }
       }
-    } catch (_) {
+    } on Object catch (_) {
       // 响应不是 JSON，退回状态码
     }
     return 'OAuth 代理返回 HTTP ${res.statusCode}';
   }
 
   void dispose() {
-    _stateController.close();
+    unawaited(_stateController.close());
     _http.close();
   }
 }

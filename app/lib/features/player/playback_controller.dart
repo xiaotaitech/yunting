@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/domain/continue_listening.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/features/library/library_controller.dart';
 
 part 'playback_controller.g.dart';
 
@@ -30,7 +31,10 @@ class OpenNotReady extends OpenResult {
 
 /// 所有「开始听」的入口（书架、续听卡片、详情、历史、离线）共用这一条路径。
 /// 原来这段判断在三个页面里各写一份，迟早会对同一种异常给出三种反应。
-@riverpod
+/// keepAlive：这是无状态的命令入口，没有人 watch 它。自动释放的话，
+/// 方法里第一个 await 之后 provider 就已被回收，再 ref.read 会直接抛错
+/// （真机上「加入书架」就这样静默失败过）。
+@Riverpod(keepAlive: true)
 class PlaybackController extends _$PlaybackController {
   @override
   void build() {}
@@ -38,7 +42,9 @@ class PlaybackController extends _$PlaybackController {
   /// 从合集的断点续播（书架播放键、续听卡片）。
   Future<OpenResult> resume(Series series) async {
     if (_isCurrent(series.id)) return const OpenAlreadyPlaying();
-    final episodes = await ref.read(episodesProvider(series.id).future);
+    final episodes = await ref
+        .read(libraryControllerProvider.notifier)
+        .episodesOf(series.id);
     final card = ContinueListening.from(series, episodes);
     if (!card.canPlay) return OpenNotReady(card.notReadyReason!);
     _start(series, episodes);
@@ -58,7 +64,9 @@ class PlaybackController extends _$PlaybackController {
     if (series.sourceMissing) {
       return const OpenNotReady(NotReadyReason.sourceMissing);
     }
-    final episodes = await ref.read(episodesProvider(series.id).future);
+    final episodes = await ref
+        .read(libraryControllerProvider.notifier)
+        .episodesOf(series.id);
     if (episodes.isEmpty) {
       return const OpenNotReady(NotReadyReason.episodesPending);
     }

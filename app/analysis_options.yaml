@@ -20,3 +20,11 @@ linter:
   rules:
     public_member_api_docs: false
     lines_longer_than_80_chars: false
+    # 下面四条是风格偏好，与本仓库既有写法冲突且不提高正确性：
+    #   fromErrno / fromJson 这类静态工厂比命名构造函数更直白；
+    #   测试里逐行 expect 比强行拼 cascade 好读；
+    #   `return _withTokenRetry(...)` 包在 async 里是为了统一异常出口。
+    prefer_constructors_over_static_methods: false
+    cascade_invocations: false
+    async_return_with_no_await: false
+    prefer_foreach: false

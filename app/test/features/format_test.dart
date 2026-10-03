@@ -13,14 +13,14 @@ void main() {
     expect(formatSyncTime(l, now, now: now), '刚刚');
     expect(
         formatSyncTime(l, now.subtract(const Duration(seconds: 40)), now: now),
-        '刚刚');
+        '刚刚',);
   });
 
   test('一小时内按分钟', () {
     expect(formatSyncTime(l, now.subtract(const Duration(minutes: 1)), now: now),
-        '1 分钟前');
+        '1 分钟前',);
     expect(formatSyncTime(l, now.subtract(const Duration(minutes: 59)), now: now),
-        '59 分钟前');
+        '59 分钟前',);
   });
 
   test('同一天内给时刻，补零', () {
@@ -29,8 +29,8 @@ void main() {
 
   test('跨天但一周内按天数（不足整天的余数向下取整）', () {
     // 8-31 22:00 到 9-2 14:30 是 40 小时，算 1 天
-    expect(formatSyncTime(l, DateTime(2026, 8, 31, 22, 0), now: now), '1 天前');
-    expect(formatSyncTime(l, DateTime(2026, 8, 30, 10, 0), now: now), '3 天前');
+    expect(formatSyncTime(l, DateTime(2026, 8, 31, 22), now: now), '1 天前');
+    expect(formatSyncTime(l, DateTime(2026, 8, 30, 10), now: now), '3 天前');
   });
 
   test('超过一周给日期时刻', () {

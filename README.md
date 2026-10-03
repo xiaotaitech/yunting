@@ -275,9 +275,29 @@ KEY_PASSWORD=...
 ```bash
 source ./env.sh
 cd app
-flutter analyze     # 静态检查
-flutter test        # 单元测试
+flutter pub get
+dart run build_runner build -d   # freezed / drift / riverpod / json 生成代码（不入库）
+flutter analyze                  # 静态检查（very_good_analysis）
+flutter test                     # 单元测试
 ```
+
+开发时可以用 `dart run build_runner watch -d` 让生成代码随改随生成；文案在 `lib/l10n/app_zh.arb`，
+`flutter pub get` 时自动生成。
+
+代码结构（refactor-app-foundation）：
+
+```
+app/lib/
+  core/       配置、错误、日志、自然排序
+  domain/     实体（Series / Episode，freezed）与纯函数
+  data/       drift 本地库与 DAO、百度/演示数据源、令牌、同步
+  playback/   PlaybackSession（会话逻辑）+ MediaEngine（播放器内核）+ AudioServiceBridge（系统通知）
+  download/   离线下载队列
+  features/   各页面：controller + 页面 + 小部件
+  app/        装配、providers、路由、主题、启动页
+```
+
+界面只经 `features/*/…_controller.dart` 改状态；读数据用 `app/providers.dart` 里的 watch 流，库一变界面自动刷新。
 
 规格与任务清单：
 
