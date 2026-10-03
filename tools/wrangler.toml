@@ -1,0 +1,12 @@
+# OAuth 代理的 Cloudflare Workers 部署（src/worker.mjs）。
+# 两个凭证都用 Secret，不写进这里：
+#   npx wrangler secret put BAIDU_APP_KEY
+#   npx wrangler secret put BAIDU_SECRET_KEY
+name = "yunting-oauth"
+main = "src/worker.mjs"
+compatibility_date = "2026-09-01"
+
+# 绑自有域名：workers.dev 在国内基本不可达。Cloudflare 会自动建 DNS 与证书。
+routes = [
+  { pattern = "yunting-auth.xiaotai.tech", custom_domain = true },
+]

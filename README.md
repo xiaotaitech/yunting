@@ -134,6 +134,22 @@ ipconfig | findstr IPv4
 这个代理只做两件事：`code → token` 和 `refresh_token → token`。
 它不接触任何文件元数据、不缓存音频、日志不记录用户文件路径。
 
+### 公网部署：Cloudflare Workers
+
+正式版用的代理是同一组端点的 Workers 版本（`tools/src/worker.mjs`），
+绑在自有域名 `https://yunting-auth.xiaotai.tech` 上——`*.workers.dev` 在国内基本不可达。
+
+```bash
+cd tools
+export CLOUDFLARE_API_TOKEN=...      # Edit Cloudflare Workers 模板，Zone 选 xiaotai.tech
+npx wrangler deploy
+# 首次部署后写入凭证（存为 Worker Secret，不进仓库）
+npx wrangler secret put BAIDU_APP_KEY
+npx wrangler secret put BAIDU_SECRET_KEY
+```
+
+Worker 必须与域名在同一个 Cloudflare 账号下，否则绑定自定义域名会报 `Can't infer zone`。
+
 ---
 
 ## 第三步：跑 App
