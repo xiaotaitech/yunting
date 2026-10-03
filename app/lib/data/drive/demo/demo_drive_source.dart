@@ -111,6 +111,15 @@ class DemoDriveSource implements CloudDriveSource {
     return bytes.sublist(start, end);
   }
 
+  /// 演示数据源解析出来的都是本地文件，下载管理器会直接标记为已缓存，
+  /// 走不到这里；仍按接口语义实现，免得将来有人依赖它时踩空。
+  @override
+  Future<Stream<List<int>>> openStream(
+    ResolvedMedia media, {
+    int start = 0,
+  }) async =>
+      File(Uri.parse(media.url).toFilePath()).openRead(start);
+
   @override
   Future<String?> readAppStateFile(String path) async {
     final cached = _stateFiles[path];

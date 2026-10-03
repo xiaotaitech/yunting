@@ -4,84 +4,83 @@
 /// 序号越界），放在 provider 里就只能靠跑真机验证，放在这里能直接单测。
 library;
 
-import 'models.dart';
+import 'package:yun_audiobook/domain/entities.dart';
+
+/// 续听卡片不能播的原因。文案在 l10n 里按枚举取。
+enum NotReadyReason {
+  /// 源文件在网盘里找不到了
+  sourceMissing,
+
+  /// 条目还在准备中（刚从网盘同步回来、还没扫章节）
+  episodesPending,
+
+  /// 记录的那一集在网盘里已经找不到了（重新解析后条目变少）
+  episodeGone,
+}
 
 class ContinueListening {
   const ContinueListening({
-    required this.book,
-    required this.chapter,
+    required this.series,
+    required this.episode,
     required this.notReadyReason,
   });
 
-  final Book book;
+  final Series series;
 
-  /// 断点所在的章节。为 null 表示章节还没就位，此时不能播。
-  final Chapter? chapter;
+  /// 断点所在的条目。为 null 表示条目还没就位，此时不能播。
+  final Episode? episode;
 
   /// 不能播的原因；能播时为 null。展示在卡片上，让用户点之前就知道。
-  final String? notReadyReason;
+  final NotReadyReason? notReadyReason;
 
   bool get canPlay => notReadyReason == null;
 
-  /// 章节内的断点位置。
-  Duration get position => Duration(milliseconds: book.currentPositionMs);
+  /// 条目内的断点位置。
+  Duration get position => series.position;
 
-  /// 已听完的书再点会从第一章开始（AudiobookHandler.openBook 的既有行为），
+  /// 已听完的合集再点会从第一集开始（PlaybackSession.start 的既有行为），
   /// 卡片要事先说明，而不是让用户点下去才发现回到了开头。
-  bool get restartsFromBeginning => book.finished;
+  bool get restartsFromBeginning => series.finished;
 
-  /// 全书维度的进度，与书架卡片同一口径。
-  double get bookProgress => book.chapterCount == 0
-      ? 0.0
-      : ((book.currentChapterIndex + 1) / book.chapterCount).clamp(0.0, 1.0);
+  /// 全合集维度的进度，与书架卡片同一口径。
+  double get progress => series.progress;
 
-  /// 挑出「最近收听」的那本书。
+  /// 挑出「最近收听」的那一个。
   ///
-  /// 不能直接取书架第一本：`BookDao.allBooks` 按
-  /// `COALESCE(last_played_at, added_at) DESC` 排序，一本刚加进来、
-  /// 从没播过的书会排在真正在听的那本前面。必须显式筛 lastPlayedAt。
-  static Book? mostRecentlyPlayed(List<Book> books) {
-    Book? best;
-    for (final b in books) {
-      final at = b.lastPlayedAt;
+  /// 不能直接取书架第一个：书架按 `COALESCE(last_played_at, added_at) DESC`
+  /// 排序，一本刚加进来、从没播过的书会排在真正在听的那本前面。
+  /// 必须显式筛 lastPlayedAt。
+  static Series? mostRecentlyPlayed(List<Series> shelf) {
+    Series? best;
+    for (final s in shelf) {
+      final at = s.lastPlayedAt;
       if (at == null) continue;
-      if (best == null || at.isAfter(best.lastPlayedAt!)) best = b;
+      if (best == null || at.isAfter(best.lastPlayedAt!)) best = s;
     }
     return best;
   }
 
-  /// 把书与它的章节组装成卡片数据。
+  /// 把合集与它的条目组装成卡片数据。
   ///
-  /// 章节列表为空（刚从网盘同步回来、还没扫章节）或记录的序号越界
-  /// （重新解析后章节变少）时，不抛异常，也不按序号盲目索引——
-  /// 标成「未就绪」，卡片照常显示书名，只是不让点。
-  static ContinueListening from(Book book, List<Chapter> chapters) {
-    if (book.sourceMissing) {
-      return ContinueListening(
-        book: book,
-        chapter: null,
-        notReadyReason: '源文件在网盘里找不到了',
-      );
-    }
-    if (chapters.isEmpty) {
-      return ContinueListening(
-        book: book,
-        chapter: null,
-        notReadyReason: '章节还在准备中',
-      );
-    }
-    final index = book.finished ? 0 : book.currentChapterIndex;
-    if (index < 0 || index >= chapters.length) {
-      return ContinueListening(
-        book: book,
-        chapter: null,
-        notReadyReason: '这一章在网盘里已经找不到了',
-      );
+  /// 条目列表为空或记录的序号越界时，不抛异常，也不按序号盲目索引——
+  /// 标成「未就绪」，卡片照常显示标题，只是不让点。
+  static ContinueListening from(Series series, List<Episode> episodes) {
+    NotReadyReason? reason;
+    Episode? episode;
+    final index = series.finished ? 0 : series.currentEpisodeIndex;
+    if (series.sourceMissing) {
+      reason = NotReadyReason.sourceMissing;
+    } else if (episodes.isEmpty) {
+      reason = NotReadyReason.episodesPending;
+    } else if (index < 0 || index >= episodes.length) {
+      reason = NotReadyReason.episodeGone;
+    } else {
+      episode = episodes[index];
     }
     return ContinueListening(
-      book: book,
-      chapter: chapters[index],
-      notReadyReason: null,
+      series: series,
+      episode: episode,
+      notReadyReason: reason,
     );
   }
 }

@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # 嵌套的 freezed 对象要调它们自己的 toJson
+          explicit_to_json: true
+          include_if_null: true

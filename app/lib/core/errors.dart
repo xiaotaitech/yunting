@@ -13,6 +13,9 @@ enum DriveErrorKind {
   /// 文件或路径不存在
   notFound,
 
+  /// 目录里没有可识别的媒体文件（认领时）
+  noMedia,
+
   /// 网络层失败，应退避重试
   network,
 
@@ -26,8 +29,12 @@ enum DriveErrorKind {
   api,
 }
 
+/// 网盘与播放链路上的错误。
+///
+/// [message] 是给日志与排障看的技术描述；面向用户的文案按 [kind] 在界面层
+/// 从 l10n 里取（见 features/common/error_text.dart），不在这里拼。
 class DriveException implements Exception {
-  DriveException(this.kind, this.message, {this.errno});
+  const DriveException(this.kind, this.message, {this.errno});
 
   final DriveErrorKind kind;
   final String message;
@@ -42,26 +49,6 @@ class DriveException implements Exception {
   /// 这一类错误意味着要动令牌，而不是重试。
   bool get isAuthProblem =>
       kind == DriveErrorKind.authExpired || kind == DriveErrorKind.authInvalid;
-
-  String get userMessage {
-    switch (kind) {
-      case DriveErrorKind.authExpired:
-      case DriveErrorKind.authInvalid:
-        return '网盘授权已失效，请重新登录';
-      case DriveErrorKind.rateLimited:
-        return '请求过于频繁，请稍后再试';
-      case DriveErrorKind.notFound:
-        return '网盘中找不到该文件，可能已被移动或删除';
-      case DriveErrorKind.network:
-        return '网络连接不可用，请检查网络后重试';
-      case DriveErrorKind.linkExpired:
-        return '播放地址已过期，正在重新获取';
-      case DriveErrorKind.storageFull:
-        return '设备存储空间不足';
-      case DriveErrorKind.api:
-        return message;
-    }
-  }
 
   @override
   String toString() => 'DriveException($kind, errno=$errno): $message';

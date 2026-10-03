@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'models.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 /// 极简 ID3v2 标签解析。
 ///

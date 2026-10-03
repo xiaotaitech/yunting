@@ -1,25 +1,31 @@
 import 'dart:async';
 import 'dart:convert';
 
-
-import '../../core/config.dart';
-import '../../core/errors.dart';
-import '../../core/logging.dart';
-import '../drive/cloud_drive_source.dart';
-import '../local/database.dart';
-import 'library_snapshot.dart';
+import 'package:drift/drift.dart';
+import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
+import 'package:yun_audiobook/data/local/database.dart';
+import 'package:yun_audiobook/data/sync/library_snapshot.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 /// 状态同步（listening-progress 规格）。
 ///
 /// 本地 SQLite 是权威读写来源；网盘 `/apps/<应用名>/library.json` 只是同步载体。
 /// 同步全程后台异步，失败只重试、绝不阻塞收听。
 /// 上传内容仅为书架与进度元数据，绝不包含任何音频。
+///
+/// 两个出口让界面不必自己记得调 [markDirty]：书架类变更由 controller 调用，
+/// 播放进度由 PlaybackSink 调用。
 class LibrarySync {
   LibrarySync({
     required CloudDriveSource drive,
     required AppDatabase db,
   })  : _drive = drive,
         _db = db;
+
+  static const _lastSyncKey = 'last_sync_at';
 
   /// 节流窗口：变更频繁时不必每次都上传。
   static const Duration throttle = Duration(seconds: 30);
@@ -60,8 +66,10 @@ class LibrarySync {
         AppConfig.syncFilePath,
         const JsonEncoder.withIndent('  ').convert(merged.toJson()),
       );
-      await _db.setMeta('last_sync_at',
-          '${DateTime.now().millisecondsSinceEpoch}');
+      await _db.settingsDao.write(
+        _lastSyncKey,
+        '${DateTime.now().millisecondsSinceEpoch}',
+      );
       Log.d('sync', '同步完成，共 ${merged.books.length} 条记录');
       return true;
     } on DriveException catch (e) {
@@ -78,11 +86,11 @@ class LibrarySync {
     }
   }
 
-  Future<DateTime?> lastSyncAt() async {
-    final raw = await _db.meta('last_sync_at');
-    final ms = int.tryParse(raw ?? '');
-    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
-  }
+  Stream<DateTime?> watchLastSyncAt() =>
+      _db.settingsDao.watch(_lastSyncKey).map((raw) {
+        final ms = int.tryParse(raw ?? '');
+        return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+      });
 
   Future<LibrarySnapshot?> _readRemote() async {
     final raw = await _drive.readAppStateFile(AppConfig.syncFilePath);
@@ -98,82 +106,82 @@ class LibrarySync {
   }
 
   Future<LibrarySnapshot> _localSnapshot() async {
-    final rows = await _db.db.query('books');
-    return LibrarySnapshot(
-      version: LibrarySnapshot.currentVersion,
-      books: rows.map(_rowToRecord).toList(),
-    );
+    // 含软删除的行：删除也是要同步出去的变更
+    final rows = await _db.select(_db.books).get();
+    return LibrarySnapshot(books: rows.map(_rowToRecord).toList());
   }
 
   Future<void> _applySnapshot(LibrarySnapshot snapshot) async {
-    await _db.db.transaction((txn) async {
+    final books = _db.books;
+    await _db.transaction(() async {
       for (final r in snapshot.books) {
         // 只写「同步得来」的字段。chapter_count 与 source_missing 是本地派生的，
-        // 不属于同步内容，不能被远端记录覆盖。
-        final values = {
-          'folder_path': r.folderPath,
-          'title': r.title,
-          'author': r.author,
-          'cover_fs_id': r.coverFsId,
-          'current_chapter_index': r.currentChapterIndex,
-          'current_position_ms': r.currentPositionMs,
-          'finished': r.finished ? 1 : 0,
-          'title_edited': r.titleEditedByUser ? 1 : 0,
-          'author_edited': r.authorEditedByUser ? 1 : 0,
-          'order_edited': r.orderEditedByUser ? 1 : 0,
-          'added_at': r.addedAt,
-          'updated_at': r.updatedAt,
-          'last_played_at': r.lastPlayedAt,
-          'updated_by_device': r.updatedByDevice,
-          'deleted': r.deleted ? 1 : 0,
-        };
+        // 不属于同步内容，不能被远端记录覆盖；kind 对已有的行也以本地为准
+        // （旧版本 App 上传时会丢掉它）。
+        final values = BooksCompanion(
+          folderPath: Value(r.folderPath),
+          title: Value(r.title),
+          author: Value(r.author),
+          coverFsId: Value(r.coverFsId),
+          currentChapterIndex: Value(r.currentChapterIndex),
+          currentPositionMs: Value(r.currentPositionMs),
+          finished: Value(r.finished),
+          titleEdited: Value(r.titleEditedByUser),
+          authorEdited: Value(r.authorEditedByUser),
+          orderEdited: Value(r.orderEditedByUser),
+          addedAt: Value(r.addedAt),
+          updatedAt: Value(r.updatedAt),
+          lastPlayedAt: Value(r.lastPlayedAt),
+          updatedByDevice: Value(r.updatedByDevice),
+          deleted: Value(r.deleted),
+        );
 
         // 关键：绝不能用 INSERT OR REPLACE。
         // SQLite 的 REPLACE 是「先 DELETE 旧行再 INSERT」，而 chapters 表对
         // books 有 ON DELETE CASCADE——那样每同步一次就会把这本书的章节和
         // 离线缓存记录全部删光。实测过：同步后 chapters 表直接清零。
-        final updated = await txn.update(
-          'books',
-          values,
-          where: 'id = ?',
-          whereArgs: [r.id],
-        );
+        final updated =
+            await (_db.update(books)..where((b) => b.id.equals(r.id)))
+                .write(values);
         if (updated == 0) {
-          await txn.insert('books', {
-            'id': r.id,
-            ...values,
-            // 新拉回来的书还没解析章节，等打开时再补
-            'chapter_count': 0,
-            'source_missing': 0,
-          });
+          await _db.into(books).insert(
+                values.copyWith(
+                  id: Value(r.id),
+                  kind: Value(r.kind.name),
+                  // 新拉回来的合集还没解析条目，等打开时再补
+                  chapterCount: const Value(0),
+                  sourceMissing: const Value(false),
+                ),
+              );
         }
       }
     });
 
-    // chapter_count 是本地派生数据，按实际章节数校准一次。
-    await _db.db.rawUpdate(
+    // chapter_count 是本地派生数据，按实际条目数校准一次。
+    await _db.customStatement(
       'UPDATE books SET chapter_count = '
       '(SELECT COUNT(*) FROM chapters WHERE chapters.book_id = books.id)',
     );
   }
 
-  BookRecord _rowToRecord(Map<String, Object?> r) => BookRecord(
-        id: r['id'] as String,
-        folderPath: r['folder_path'] as String,
-        title: r['title'] as String,
-        author: r['author'] as String?,
-        coverFsId: r['cover_fs_id'] as String?,
-        currentChapterIndex: (r['current_chapter_index'] as num).toInt(),
-        currentPositionMs: (r['current_position_ms'] as num).toInt(),
-        finished: (r['finished'] as num).toInt() == 1,
-        deleted: (r['deleted'] as num).toInt() == 1,
-        addedAt: (r['added_at'] as num).toInt(),
-        updatedAt: (r['updated_at'] as num).toInt(),
-        lastPlayedAt: (r['last_played_at'] as num?)?.toInt(),
-        updatedByDevice: r['updated_by_device'] as String? ?? '',
-        titleEditedByUser: (r['title_edited'] as num).toInt() == 1,
-        authorEditedByUser: (r['author_edited'] as num).toInt() == 1,
-        orderEditedByUser: (r['order_edited'] as num).toInt() == 1,
+  BookRecord _rowToRecord(BookRow r) => BookRecord(
+        id: r.id,
+        folderPath: r.folderPath,
+        title: r.title,
+        author: r.author,
+        coverFsId: r.coverFsId,
+        currentChapterIndex: r.currentChapterIndex,
+        currentPositionMs: r.currentPositionMs,
+        finished: r.finished,
+        deleted: r.deleted,
+        addedAt: r.addedAt,
+        updatedAt: r.updatedAt,
+        lastPlayedAt: r.lastPlayedAt,
+        updatedByDevice: r.updatedByDevice,
+        titleEditedByUser: r.titleEdited,
+        authorEditedByUser: r.authorEdited,
+        orderEditedByUser: r.orderEdited,
+        kind: SeriesKind.parse(r.kind),
       );
 
   void dispose() => _pending?.cancel();

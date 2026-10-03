@@ -93,6 +93,18 @@ class BaiduDriveSource implements CloudDriveSource {
     return _api.readRange(media.url, start, endInclusive);
   }
 
+  @override
+  Future<Stream<List<int>>> openStream(
+    ResolvedMedia media, {
+    int start = 0,
+  }) async {
+    final res = await _api.openStream(
+      media.url,
+      range: start > 0 ? 'bytes=$start-' : null,
+    );
+    return res.stream;
+  }
+
   // ------------------------------------------------------- 应用状态文件
 
   @override
