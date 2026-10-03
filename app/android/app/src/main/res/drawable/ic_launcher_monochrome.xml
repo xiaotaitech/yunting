@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 主题图标（Android 13+）：单色，音频条镂空 -->
+<!-- 主题图标（Android 13+）：单色，系统只取形状 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:translateY="-1">
-        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M38,74 L70,74 A11,11 0 1,0 68.96,52.05 A15,15 0 1,0 39.03,50.04 A12,12 0 1,0 38,74 Z M41.5,60 A2,2 0 0,1 45.5,60 V64 A2,2 0 0,1 41.5,64 Z M48.5,55 A2,2 0 0,1 52.5,55 V69 A2,2 0 0,1 48.5,69 Z M55.5,58 A2,2 0 0,1 59.5,58 V66 A2,2 0 0,1 55.5,66 Z M62.5,61 A2,2 0 0,1 66.5,61 V63 A2,2 0 0,1 62.5,63 Z" />
+    <!-- 启动器会把图标裁成圆形等形状：整体缩到 88%，耳罩离遮罩边缘留出呼吸感 -->
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.88" android:scaleY="0.88">
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M35,56 A19,19 0 0,1 73,56" />
+    <path android:fillColor="#FFFFFF" android:pathData="M34,55 H36 A5,5 0 0,1 41,60 V69 A5,5 0 0,1 36,74 H34 A5,5 0 0,1 29,69 V60 A5,5 0 0,1 34,55 Z M72,55 H74 A5,5 0 0,1 79,60 V69 A5,5 0 0,1 74,74 H72 A5,5 0 0,1 67,69 V60 A5,5 0 0,1 72,55 Z" />
+    <path android:fillColor="#FFFFFF" android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineJoin="round" android:pathData="M50,57.5 L50,71.5 L61.5,64.5 Z" />
     </group>
 </vector>

@@ -241,7 +241,7 @@ flutter build apk --release \
 - **应用内**：启动时静默检查新版本（同一版本只提示一次），「我的 → 检查更新」可手动检查；下载完成后直接打开安装界面，
   需要"安装未知应用"授权时授权回来自动继续。「我的 → 使用帮助」里有各品牌手机的安装说明。
 
-图标：标志定义在 `app/lib/features/common/widgets/brand_mark.dart`，改完运行 `cd app && flutter test tool/generate_icons_test.dart` 重新生成 PNG；
+图标：标志定义在 `app/lib/features/common/widgets/brand_mark.dart`（耳机 + 播放键，橙色渐变），改完运行 `cd app && flutter test tool/generate_icons_test.dart` 重新生成 PNG；
 Android 自适应图标是 `res/drawable/ic_launcher_*.xml`，坐标与 Dart 一致，要一起改。
 
 需要的仓库 Secrets：

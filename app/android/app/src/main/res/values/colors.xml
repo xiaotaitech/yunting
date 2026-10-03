@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 品牌绿，与 main.dart 的 colorSchemeSeed、BrandMark.green 一致 -->
-    <color name="ic_launcher_background">#3F6B4F</color>
+    <!-- 品牌橙。自适应图标用的是 drawable/ic_launcher_background 的渐变，这里是取渐变中间色的纯色兜底 -->
+    <color name="ic_launcher_background">#F06F43</color>
 </resources>

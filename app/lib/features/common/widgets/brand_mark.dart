@@ -1,62 +1,97 @@
 import 'package:flutter/material.dart';
 
-/// 云听书的标志：一朵云，里面是四根音频条——「网盘里的书，拿来听」。
+/// 云听书的标志：一副耳机，两只耳罩之间一个播放键——「听」，也能「看」。
 ///
-/// 这是图标的唯一来源：应用内（登录页）直接画它，启动图标的 PNG 也由
-/// `tool/generate_icons_test.dart` 用它渲染。Android 自适应图标的矢量 XML
-/// （res/drawable/ic_launcher_foreground.xml 等）用的是同一套坐标，改这里要一起改。
+/// 这是图标的唯一来源：应用内（启动页、登录页）直接画它，启动图标的 PNG
+/// 也由 `tool/generate_icons_test.dart` 用它渲染。Android 自适应图标、单色图标
+/// 与通知栏图标的矢量 XML（res/drawable/ic_launcher_*.xml、ic_stat_yun.xml）
+/// 用的是同一套坐标，改这里要一起改。
 ///
-/// 坐标系是自适应图标的 108×108，内容落在中心直径 66 的安全区内。
+/// 坐标系是自适应图标的 108×108，内容（x 29–79，y 34–74）落在中心直径 66 的
+/// 安全区内，任何形状的遮罩都裁不到。
 abstract final class BrandMark {
-  static const green = Color(0xFF3F6B4F);
+  /// 背景渐变：左上暖橙到右下朱红。
+  static const gradientStart = Color(0xFFFF8A4C);
+  static const gradientEnd = Color(0xFFE2543B);
   static const white = Color(0xFFFFFFFF);
 
-  /// 云的外轮廓：底边一条直线，右、上、左三段圆弧。
-  static Path cloud() => Path()
-    ..moveTo(38, 74)
-    ..lineTo(70, 74)
-    ..arcToPoint(const Offset(68.96, 52.05),
-        radius: const Radius.circular(11), largeArc: true, clockwise: false,)
-    ..arcToPoint(const Offset(39.03, 50.04),
-        radius: const Radius.circular(15), largeArc: true, clockwise: false,)
-    ..arcToPoint(const Offset(38, 74),
-        radius: const Radius.circular(12), largeArc: true, clockwise: false,)
-    ..close();
+  /// 头梁：圆心 (54,56)、半径 19 的上半圆弧，线宽 6，圆头。
+  static const bandCenter = Offset(54, 56);
+  static const bandRadius = 19.0;
+  static const bandWidth = 6.0;
 
-  /// 四根音频条（左起 x、上沿、下沿），宽 4，两端圆头。
-  static const bars = [
-    (41.5, 58.0, 66.0),
-    (48.5, 53.0, 71.0),
-    (55.5, 56.0, 68.0),
-    (62.5, 59.0, 65.0),
+  /// 耳罩：正好落在头梁两端的正下方，左右对称。
+  static final cups = [
+    RRect.fromLTRBR(29, 55, 41, 74, const Radius.circular(5)),
+    RRect.fromLTRBR(67, 55, 79, 74, const Radius.circular(5)),
   ];
 
-  static Path barsPath() {
-    final p = Path();
-    for (final (x, top, bottom) in bars) {
-      p.addRRect(
-          RRect.fromLTRBR(x, top, x + 4, bottom, const Radius.circular(2)),);
-    }
-    return p;
-  }
+  /// 播放键：几何重心与耳罩的垂直中线对齐；描一圈同色圆角边让三个角变圆。
+  static Path play() => Path()
+    ..moveTo(50, 57.5)
+    ..lineTo(50, 71.5)
+    ..lineTo(61.5, 64.5)
+    ..close();
+  static const playCornerStroke = 3.0;
 
   /// 在 [size] 的方形画布上画完整图标。
-  /// [background] 为 false 时只画前景（透明底，登录页用）；
+  /// [background] 为 false 时只画前景（透明底）；
   /// [contentScale] 是前景占画布的比例：自适应图标 1.0，传统方形图标放大一些才不显小。
-  static void paint(Canvas canvas, Size size,
-      {bool background = true, double contentScale = 1.0, Color? tint,}) {
+  static void paint(
+    Canvas canvas,
+    Size size, {
+    bool background = true,
+    double contentScale = 1.0,
+    Color? tint,
+  }) {
     if (background) {
-      canvas.drawRect(Offset.zero & size, Paint()..color = green);
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [gradientStart, gradientEnd],
+          ).createShader(Offset.zero & size),
+      );
     }
+    final fg = tint ?? white;
     final s = size.shortestSide / 108 * contentScale;
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(s);
-    canvas.translate(-54, -55);
-    canvas.drawPath(cloud(), Paint()..color = tint ?? white);
-    canvas.drawPath(
-        barsPath(), Paint()..color = background ? green : (tint ?? green),);
-    canvas.restore();
+    canvas
+      ..save()
+      ..translate(size.width / 2, size.height / 2)
+      ..scale(s)
+      ..translate(-54, -54)
+      ..drawArc(
+        Rect.fromCircle(center: bandCenter, radius: bandRadius),
+        3.141592653589793,
+        3.141592653589793,
+        false,
+        Paint()
+          ..color = fg
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = bandWidth
+          ..strokeCap = StrokeCap.round,
+      );
+    for (final cup in cups) {
+      canvas.drawRRect(cup, Paint()..color = fg);
+    }
+    canvas
+      ..drawPath(
+        play(),
+        Paint()
+          ..color = fg
+          ..style = PaintingStyle.fill,
+      )
+      ..drawPath(
+        play(),
+        Paint()
+          ..color = fg
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = playCornerStroke
+          ..strokeJoin = StrokeJoin.round,
+      )
+      ..restore();
   }
 }
 
