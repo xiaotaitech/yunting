@@ -7,6 +7,13 @@ plugins {
 }
 
 android {
+    // 原生库压缩进 APK（安装时解压）。不压缩的话 libflutter.so 一个就 11MB，
+    // 单架构包也超过 jsDelivr 单文件 20MB 上限，国内拉不到更新只能走 GitHub。
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
     namespace = "tech.xiaotai.yunting"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

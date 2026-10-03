@@ -76,10 +76,19 @@ jobs:
           flutter pub get
           dart run build_runner build -d
           flutter test
-          # 只打 ARM：x86_64 只有模拟器用得到
+          # 只打 ARM：x86_64 只有模拟器用得到。
+          # 混淆 + 拆出调试符号：包更小（配合 build.gradle 里压缩原生库，整包压到 20MB 内，
+          # 才能放上 jsDelivr）。符号文件作为构件保留，用来还原崩溃堆栈。
           flutter build apk --release --target-platform android-arm,android-arm64 \
+            --obfuscate --split-debug-info=build/symbols \
             --build-name="$VERSION_NAME" --build-number="$VERSION_CODE" \
             --dart-define=RELEASE_REPO="$RELEASE_REPO" $defines
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yunting-symbols-${{ env.TAG }}
+          path: app/build/symbols/
+          retention-days: 90
 
       - name: 整理安装包与更新说明
         run: |
@@ -120,21 +129,48 @@ jobs:
             dist/yunting-${{ env.TAG }}.apk
           make_latest: true
 
-      # 版本信息的备用线路：latest.json 放到本仓库的 dist 分支，经 jsDelivr 分发（每次覆盖，只保留最新一版）。
-      # 国内 api.github.com 经常不通，但 jsDelivr 通常可达，应用检查更新时两边并查。
-      # 安装包不放镜像：云听书 APK 约 35MB，超过 jsDelivr 单文件 20MB 上限，下载只走 GitHub Releases。
-      - name: 同步版本信息（jsDelivr）
+      # 国内备用线路（与影匣一致）：版本信息与安装包都放到本仓库的 dist 分支，经 jsDelivr 分发。
+      # 国内 api.github.com、github.com 下载经常不通，jsDelivr 通常可达；应用检查更新时两边并查，
+      # 下载前对各线路测速、最快的优先。dist 分支每次强推覆盖，只保留最新一版，仓库不会越来越大。
+      # 安装包地址按提交 sha 引用：内容不可变，CDN 不会给出上一版的旧缓存。
+      - name: 同步到国内线路（jsDelivr）
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           repo="$RELEASE_REPO"
+          gh_url="https://github.com/$repo/releases/download/$TAG/yunting.apk"
           mkdir mirror && cd mirror
           git init -q -b dist
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          jq -n --arg v "$VERSION_NAME" --rawfile n ../dist/notes.md --arg p "https://github.com/$repo/releases/tag/$TAG" \
-            --arg a "https://github.com/$repo/releases/download/$TAG/yunting.apk" \
-            '{version: $v, notes: $n, page: $p, apk: [$a]}' > latest.json
+
+          apks=()
+          size=$(stat -c %s ../dist/yunting.apk)
+          # jsDelivr 单文件上限 20MB；超了就只给 GitHub 线路，不让镜像返回半截或 403
+          if [ "$size" -le $((20 * 1024 * 1024)) ]; then
+            cp ../dist/yunting.apk .
+            git add yunting.apk && git commit -qm "云听书 $VERSION_NAME 安装包"
+            sha=$(git rev-parse HEAD)
+            apks+=("https://cdn.jsdelivr.net/gh/$repo@$sha/yunting.apk")
+            apks+=("https://fastly.jsdelivr.net/gh/$repo@$sha/yunting.apk")
+          else
+            echo "::warning::安装包 $((size / 1048576))MB 超过 jsDelivr 上限，本次只走 GitHub"
+          fi
+          apks+=("$gh_url")
+
+          jq -n --arg v "$VERSION_NAME" --rawfile n ../dist/notes.md \
+            --arg p "https://github.com/$repo/releases/tag/$TAG" \
+            '{version: $v, notes: $n, page: $p, apk: $ARGS.positional}' \
+            --args "${apks[@]}" > latest.json
           git add latest.json && git commit -qm "云听书 $VERSION_NAME 版本信息"
           git push -qf "https://x-access-token:$GH_TOKEN@github.com/$repo.git" dist
-          curl -s -o /dev/null "https://purge.jsdelivr.net/gh/$repo@dist/latest.json" || true
+
+          # 刷新 @dist 的缓存（latest.json 用的是分支地址），再预热安装包，让第一个用户不用等回源
+          for f in latest.json yunting.apk; do
+            curl -s -o /dev/null "https://purge.jsdelivr.net/gh/$repo@dist/$f" || true
+          done
+          for u in "${apks[@]:0:2}"; do
+            [ "$u" = "$gh_url" ] && continue
+            curl -s -o /dev/null -r 0-1023 "$u" || echo "::warning::预热失败：$u"
+          done
+          cat latest.json

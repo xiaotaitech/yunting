@@ -69,18 +69,53 @@ Future<void> showUpdateDialog(
     );
 
 /// 发现新版本：显示更新说明，下载完成后自动打开安装界面。
-class _UpdateDialog extends StatefulWidget {
+class _UpdateDialog extends ConsumerStatefulWidget {
   const _UpdateDialog({required this.release, required this.current});
 
   final AppRelease release;
   final String current;
 
   @override
-  State<_UpdateDialog> createState() => _UpdateDialogState();
+  ConsumerState<_UpdateDialog> createState() => _UpdateDialogState();
 }
 
-class _UpdateDialogState extends State<_UpdateDialog> {
+class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
   bool _downloading = false;
+
+  /// 正在测速（下载前那几秒）。
+  bool _probing = false;
+
+  /// 实际用的线路（测速后排第一的主机名）。
+  String? _line;
+
+  /// 先测速排好线路，再交给系统下载器；一条失败它会自动换下一条。
+  Future<void> _download() async {
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _downloading = true;
+      _probing = true;
+    });
+    try {
+      final urls = await ref
+          .read(appUpdaterProvider)
+          .fastestFirst(widget.release.apkUrls);
+      if (mounted) {
+        setState(() {
+          _probing = false;
+          _line = AppUpdater.hostOf(urls.first);
+        });
+      }
+      await AppInstaller.download(urls, widget.release.version);
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _downloading = false;
+        _probing = false;
+      });
+      messenger.showSnackBar(SnackBar(content: Text(l.updateDownloadFailed)));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,9 +142,14 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               if (_downloading) ...[
                 const SizedBox(height: 8),
                 Text(
-                  l.updateDownloading,
+                  _probing ? l.updateProbing : l.updateDownloading,
                   style: TextStyle(color: theme.colorScheme.primary),
                 ),
+                if (_line != null)
+                  Text(
+                    l.updateLine(_line!),
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
               // 各品牌手机安装时会有不同的确认步骤（如小米的增强防护、华为的纯净模式）
               TextButton(
@@ -135,18 +175,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         ),
         if (r.apkUrls.isNotEmpty && !_downloading)
           FilledButton(
-            onPressed: () async {
-              setState(() => _downloading = true);
-              try {
-                await AppInstaller.download(r.apkUrls, r.version);
-              } on Object {
-                if (!context.mounted) return;
-                setState(() => _downloading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.updateDownloadFailed)),
-                );
-              }
-            },
+            onPressed: _download,
             child: Text(l.updateDownload),
           ),
       ],

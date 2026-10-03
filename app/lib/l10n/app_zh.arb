@@ -637,5 +637,14 @@
       }
     }
   },
-  "addOnShelf": "已在书架"
+  "addOnShelf": "已在书架",
+  "updateProbing": "正在测速，挑最快的下载线路…",
+  "updateLine": "线路：{host}",
+  "@updateLine": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  }
 }

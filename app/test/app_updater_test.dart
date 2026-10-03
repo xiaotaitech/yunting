@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -24,9 +25,11 @@ void main() {
     expect(AppUpdater.cleanNotes(body), '- 修复甲\n- 新增乙');
   });
 
-  http.Response json(Object o, [int status = 200]) =>
-      http.Response.bytes(utf8.encode(jsonEncode(o)), status,
-          headers: {'content-type': 'application/json; charset=utf-8'},);
+  http.Response json(Object o, [int status = 200]) => http.Response.bytes(
+        utf8.encode(jsonEncode(o)),
+        status,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
 
   final ghRelease = {
     'tag_name': 'v0.3.0',
@@ -47,8 +50,10 @@ void main() {
     'apk': ['https://cdn/yunting.apk', 'https://x/yunting.apk'],
   };
 
-  AppUpdater updater(http.Response Function(Uri) handler,
-          {List<String> mirrors = const ['https://m/latest.json'],}) =>
+  AppUpdater updater(
+    http.Response Function(Uri) handler, {
+    List<String> mirrors = const ['https://m/latest.json'],
+  }) =>
       AppUpdater(
         client: MockClient((req) async => handler(req.url)),
         repo: 'o/r',
@@ -57,9 +62,11 @@ void main() {
       );
 
   test('取 GitHub 最新 Release 中固定名称的安装包', () async {
-    final r = await updater((u) => u.path == '/repos/o/r/releases/latest'
-        ? json(ghRelease)
-        : json({}, 404),).latest();
+    final r = await updater(
+      (u) => u.path == '/repos/o/r/releases/latest'
+          ? json(ghRelease)
+          : json({}, 404),
+    ).latest();
     expect(r.version, '0.3.0');
     expect(r.apkUrls, ['https://x/yunting.apk']);
     expect(r.notes, '更新说明');
@@ -82,7 +89,8 @@ void main() {
 
   test('两边都可用且版本一致时合并下载地址，镜像在前', () async {
     final r = await updater(
-        (u) => u.host == 'api' ? json(ghRelease) : json(mirrorJson),).latest();
+      (u) => u.host == 'api' ? json(ghRelease) : json(mirrorJson),
+    ).latest();
     expect(r.pageUrl, 'https://gh/page');
     expect(r.apkUrls, ['https://cdn/yunting.apk', 'https://x/yunting.apk']);
   });
@@ -90,8 +98,94 @@ void main() {
   test('还没有发布版本时明确提示', () async {
     expect(
       updater((_) => json({}, 404)).latest(),
-      throwsA(isA<UpdateException>()
-          .having((e) => e.message, 'message', '还没有发布版本'),),
+      throwsA(
+        isA<UpdateException>().having((e) => e.message, 'message', '还没有发布版本'),
+      ),
     );
+  });
+
+  group('下载前测速', () {
+    /// 每条线路按给定的「每 64KB 耗时」吐数据；status 非 200/206 视为失败。
+    AppUpdater updaterWith(
+            Map<String, ({int status, Duration perChunk})> lines,) =>
+        AppUpdater(
+          repo: 'o/r',
+          client: MockClient.streaming((req, _) async {
+            final line = lines[req.url.host]!;
+            expect(
+                req.headers['Range'], 'bytes=0-${AppUpdater.probeBytes - 1}',);
+            Stream<List<int>> body() async* {
+              for (var i = 0; i < 4; i++) {
+                await Future<void>.delayed(line.perChunk);
+                yield List.filled(64 * 1024, 0);
+              }
+            }
+
+            return http.StreamedResponse(
+              line.status >= 400 ? const Stream.empty() : body(),
+              line.status,
+            );
+          }),
+        );
+
+    test('按实测速度从快到慢排，失败的排最后', () async {
+      final u = updaterWith({
+        'slow.example': (
+          status: 206,
+          perChunk: const Duration(milliseconds: 60)
+        ),
+        'dead.example': (status: 403, perChunk: Duration.zero),
+        'fast.example': (
+          status: 206,
+          perChunk: const Duration(milliseconds: 5)
+        ),
+      });
+      final ranked = await u.fastestFirst([
+        'https://slow.example/a.apk',
+        'https://dead.example/a.apk',
+        'https://fast.example/a.apk',
+      ]);
+      expect(ranked.map(AppUpdater.hostOf), [
+        'fast.example',
+        'slow.example',
+        'dead.example',
+      ]);
+    });
+
+    test('只有一条线路时不测速，原样返回', () async {
+      final u = AppUpdater(
+        repo: 'o/r',
+        client: MockClient((_) async => fail('不该发请求')),
+      );
+      expect(await u.fastestFirst(['https://a/x.apk']), ['https://a/x.apk']);
+    });
+
+    test('卡住不给数据的线路在时限后放弃，不拖住整体', () async {
+      final u = AppUpdater(
+        repo: 'o/r',
+        client: MockClient.streaming((req, _) async {
+          if (req.url.host == 'hang.example') {
+            // 永远不给数据也不关闭：只能靠测速时限脱身
+            return http.StreamedResponse(
+              StreamController<List<int>>().stream,
+              206,
+            );
+          }
+          return http.StreamedResponse(
+            Stream.value(List.filled(AppUpdater.probeBytes, 0)),
+            206,
+          );
+        }),
+      );
+      final watch = Stopwatch()..start();
+      final ranked = await u.fastestFirst([
+        'https://hang.example/a.apk',
+        'https://ok.example/a.apk',
+      ]);
+      expect(AppUpdater.hostOf(ranked.first), 'ok.example');
+      // 卡住的那条在 5 秒时限后放弃
+      expect(watch.elapsed, greaterThanOrEqualTo(AppUpdater.probeTimeout));
+      expect(watch.elapsed, lessThan(const Duration(seconds: 8)));
+    });
   });
 }

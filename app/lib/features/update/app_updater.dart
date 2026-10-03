@@ -127,6 +127,49 @@ class AppUpdater {
     Error.throwWithStackTrace(last, StackTrace.current);
   }
 
+  /// 每条线路测速时读取的字节数与时限。
+  static const int probeBytes = 256 * 1024;
+  static const probeTimeout = Duration(seconds: 5);
+
+  /// 下载前现场测速，把下载地址按速度从快到慢排好（与影匣一致）。
+  ///
+  /// 同一台手机在不同网络下哪条线路快完全不同：家里宽带 GitHub 可能最快，
+  /// 换成移动网络 jsDelivr 的 fastly 入口反而更稳。写死优先级总有人吃亏，
+  /// 所以每次下载前并发对每条线路要开头 256KB，每条最多等 5 秒，按实测速度排序；
+  /// 失败或超时的排到最后（仍然保留，DownloadManager 那层还会逐条回退）。
+  Future<List<String>> fastestFirst(List<String> urls) async {
+    if (urls.length < 2) return urls;
+    final speeds = await Future.wait(urls.map(_probe));
+    final ranked = [for (var i = 0; i < urls.length; i++) (urls[i], speeds[i])]
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    return [for (final (u, _) in ranked) u];
+  }
+
+  /// 返回字节/秒；失败或超时返回 0。
+  Future<double> _probe(String url) async {
+    final watch = Stopwatch()..start();
+    var got = 0;
+    try {
+      final req = http.Request('GET', Uri.parse(url))
+        ..headers['Range'] = 'bytes=0-${probeBytes - 1}'
+        ..headers['User-Agent'] = 'Yunting';
+      final res = await _client.send(req).timeout(probeTimeout);
+      if (res.statusCode >= 400) return 0;
+      // 服务器不理会 Range、直接给整包时，读够字节数就停
+      await for (final chunk in res.stream.timeout(probeTimeout)) {
+        got += chunk.length;
+        if (got >= probeBytes || watch.elapsed > probeTimeout) break;
+      }
+    } on Object {
+      return 0;
+    }
+    final secs = watch.elapsedMicroseconds / 1e6;
+    return got == 0 || secs == 0 ? 0 : got / secs;
+  }
+
+  /// 地址的主机名，弹窗里显示「线路：cdn.jsdelivr.net」。
+  static String hostOf(String url) => Uri.tryParse(url)?.host ?? url;
+
   /// jsDelivr 的两个入口加 raw.githubusercontent（与 api.github.com 不同域名，有时一个通一个不通）。
   static List<String> mirrorsFor(String repo) => [
         'https://cdn.jsdelivr.net/gh/$repo@dist/latest.json',

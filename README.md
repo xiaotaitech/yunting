@@ -235,10 +235,13 @@ flutter build apk --release \
 - **发布**（`.github/workflows/release.yml`）：推送 `v*` 标签（`git tag -a v0.2.0 -m "云听书 0.2.0" -m "- 更新说明…" && git push origin v0.2.0`）后测试、打签名包，
   发布到本仓库的 Releases，附固定名称的 `yunting.apk`。代码与发布在同一个仓库，用自带的 `GITHUB_TOKEN`，不需要额外令牌。
   版本号由标签计算：`v0.3.1` → versionName 0.3.1、versionCode 301。附注标签的正文就是更新说明。
-  同时把 `latest.json` 推到 `dist` 分支经 jsDelivr 分发——国内 `api.github.com` 常不通，这是检查更新的备用线路；
-  安装包约 35MB，超过 jsDelivr 单文件上限，下载只走 GitHub Releases。
+  同时把 `latest.json` 和安装包推到 `dist` 分支经 jsDelivr 分发（国内 `api.github.com`、GitHub 下载常不通）。
+  安装包地址按提交 sha 引用（cdn / fastly 两个入口 + GitHub 直链），发版后自动 purge 与预热。
+  安装包能放上 jsDelivr（单文件上限 20MB）靠两点：原生库压缩打包（`useLegacyPackaging`）与 Dart 混淆，
+  整包约 18MB；调试符号作为构件保留 90 天，用于还原崩溃堆栈。超过 20MB 时工作流自动只走 GitHub。
   **没有配置 `BAIDU_APP_KEY` / `OAUTH_PROXY_BASE` 时发的是演示版**（标题带「演示版」），配好后下一个标签自动变成正式版。
-- **应用内**：启动时静默检查新版本（同一版本只提示一次），「我的 → 检查更新」可手动检查；下载完成后直接打开安装界面，
+- **应用内**：启动时静默检查新版本（同一版本只提示一次），「我的 → 检查更新」可手动检查；下载前对各线路测速（各取 256KB、最多 5 秒），
+  最快的优先，失败自动换下一条；下载完成后直接打开安装界面，
   需要"安装未知应用"授权时授权回来自动继续。「我的 → 使用帮助」里有各品牌手机的安装说明。
 
 图标：标志定义在 `app/lib/features/common/widgets/brand_mark.dart`（耳机 + 播放键，橙色渐变），改完运行 `cd app && flutter test tool/generate_icons_test.dart` 重新生成 PNG；
