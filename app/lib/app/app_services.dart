@@ -8,13 +8,16 @@ import 'package:yun_audiobook/data/drive/baidu/baidu_drive_source.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
+import 'package:yun_audiobook/data/local/settings_dao.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
 import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/playback/audio_service_bridge.dart';
+import 'package:yun_audiobook/playback/composite_engine.dart';
 import 'package:yun_audiobook/playback/just_audio_engine.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
 import 'package:yun_audiobook/playback/playback_url_resolver.dart';
+import 'package:yun_audiobook/playback/video_engine.dart';
 
 /// 应用级依赖容器（refactor-app-foundation D8）。
 ///
@@ -31,6 +34,7 @@ class AppServices {
     required this.sync,
     required this.session,
     required this.bridge,
+    required this.videoEngine,
   });
 
   final AuthRepository auth;
@@ -43,9 +47,13 @@ class AppServices {
   final PlaybackSession session;
   final AudioServiceBridge bridge;
 
+  /// 视频画面由界面直接画，需要拿到当前的播放器实例。
+  final VideoEngine videoEngine;
+
   /// [AudioService.init] 一个进程只能调一次。启动失败后「重试」会再走一遍
   /// [create]，那时复用第一次建好的桥，而不是再 init 一次。
   static AudioServiceBridge? _bridge;
+  static VideoEngine? _videoEngine;
 
   static Future<AppServices> create() async {
     final auth = AuthRepository();
@@ -56,7 +64,12 @@ class AppServices {
     // 演示模式换掉数据源，其余各层一行不用改——这正是 CloudDriveSource 抽象的用处
     final drive = AppConfig.demoMode
         ? DemoDriveSource()
-        : BaiduDriveSource(BaiduApiClient(auth));
+        : BaiduDriveSource(
+            BaiduApiClient(auth),
+            videoQuality: () async =>
+                await database.settingsDao.read(SettingsDao.videoQualityKey) ??
+                SettingsDao.videoQualityDefault,
+          );
 
     final library = LibraryRepository(
       drive: drive,
@@ -71,9 +84,10 @@ class AppServices {
       dao: database.seriesDao,
     );
 
+    final videoEngine = _videoEngine ??= VideoEngine();
     final session = _bridge?.session ??
         PlaybackSession(
-          engine: JustAudioEngine(),
+          engine: CompositeEngine(audio: JustAudioEngine(), video: videoEngine),
           resolver: resolver,
           sink: _DatabasePlaybackSink(
             database: database,
@@ -105,6 +119,7 @@ class AppServices {
       sync: sync,
       session: bridge.session,
       bridge: bridge,
+      videoEngine: videoEngine,
     );
   }
 }

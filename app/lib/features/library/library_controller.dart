@@ -61,13 +61,18 @@ class LibraryController extends _$LibraryController {
     ref.read(librarySyncProvider).markDirty();
   }
 
+  /// 课程视频走转码流，没有可离线的文件（add-video-courses「课程不提供离线」），只下音频。
   Future<void> downloadAll(Series series) async {
     final episodes = await episodesOf(series.id);
-    await ref.read(downloadManagerProvider).enqueueAll(episodes);
+    await ref.read(downloadManagerProvider).enqueueAll(
+          episodes.where((e) => e.mediaKind == MediaKind.audio).toList(),
+        );
   }
 
-  Future<void> download(Episode episode) =>
-      ref.read(downloadManagerProvider).enqueue(episode);
+  Future<void> download(Episode episode) async {
+    if (episode.mediaKind == MediaKind.video) return;
+    await ref.read(downloadManagerProvider).enqueue(episode);
+  }
 
   Future<void> cancelDownload(Episode episode) =>
       ref.read(downloadManagerProvider).cancel(episode);

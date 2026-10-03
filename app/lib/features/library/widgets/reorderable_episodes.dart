@@ -41,8 +41,11 @@ class _ReorderableEpisodesState extends ConsumerState<ReorderableEpisodes> {
         leading: const Icon(Icons.drag_handle),
         title:
             Text(_items[i].title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(_items[i].fileName,
-            maxLines: 1, overflow: TextOverflow.ellipsis,),
+        subtitle: Text(
+          _items[i].fileName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

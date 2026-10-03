@@ -7,6 +7,7 @@ import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
 import 'package:yun_audiobook/data/sync/library_sync.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
 import 'package:yun_audiobook/features/player/playback_controller.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
@@ -78,10 +79,21 @@ void main() {
     final series = await container
         .read(libraryControllerProvider.notifier)
         .claim('/我的有声书/三体');
-    final result =
-        await container.read(playbackControllerProvider.notifier).resume(series);
+    final result = await container
+        .read(playbackControllerProvider.notifier)
+        .resume(series);
     expect(result, isA<OpenStarted>());
     expect(session.current.series?.id, series.id);
     expect(session.current.episodes, hasLength(5));
+  });
+
+  test('认领装着视频的文件夹：成为课程，条目是视频', () async {
+    final series = await container
+        .read(libraryControllerProvider.notifier)
+        .claim('/我的课程/英语入门');
+    expect(series.kind, SeriesKind.course);
+    final episodes = await db.seriesDao.episodesOf(series.id);
+    expect(episodes, hasLength(3));
+    expect(episodes.every((e) => e.mediaKind == MediaKind.video), isTrue);
   });
 }

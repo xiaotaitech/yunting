@@ -44,6 +44,30 @@ class BaiduApiClient {
         'User-Agent': AppConfig.panUserAgent,
       };
 
+  /// GET 一个网盘接口并原样返回响应正文。给返回值不一定是 JSON 的接口用
+  /// （转码流：成功时直接是 M3U8 文本，非会员首次是一段带 errno=133 的 JSON）。
+  /// 不检查 errno，由调用方解析。鉴权失败（HTTP 401）同样刷新令牌重放一次。
+  Future<String> getText(
+    String path,
+    Map<String, String> query, {
+    Map<String, String> headers = const {},
+  }) {
+    return _withTokenRetry((token) async {
+      final uri = Uri.parse('$_panBase$path').replace(
+        queryParameters: {...query, 'access_token': token},
+      );
+      final res = await _http.get(uri, headers: {
+        ..._headers,
+        ...headers
+      }).timeout(const Duration(seconds: 25));
+      Log.d('baidu', 'GET $path -> ${res.statusCode}');
+      if (res.statusCode >= 400) {
+        throw DriveException.fromStatus(res.statusCode, context: path);
+      }
+      return utf8.decode(res.bodyBytes);
+    });
+  }
+
   /// GET 一个返回 JSON 的网盘接口。鉴权失败会自动刷新令牌并重放一次。
   Future<Map<String, dynamic>> getJson(
     String path,
@@ -114,9 +138,15 @@ class BaiduApiClient {
       );
       final request = http.MultipartRequest('POST', uri)
         ..headers.addAll(_headers)
-        ..files.add(http.MultipartFile.fromBytes('file', bytes,
-            filename: 'chunk',),);
-      final streamed = await request.send().timeout(const Duration(seconds: 60));
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: 'chunk',
+          ),
+        );
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 60));
       final res = await http.Response.fromStream(streamed);
       Log.d('baidu', 'UPLOAD slice $partSeq -> ${res.statusCode}');
       if (res.statusCode >= 400) {
@@ -182,8 +212,10 @@ class BaiduApiClient {
     if (errno != 0) throw DriveException.fromErrno(errno, context: path);
     final errorCode = json['error_code'];
     if (errorCode != null && errorCode != 0) {
-      throw DriveException(DriveErrorKind.api,
-          '接口 $path 返回 error_code=$errorCode ${json['error_msg'] ?? ''}',);
+      throw DriveException(
+        DriveErrorKind.api,
+        '接口 $path 返回 error_code=$errorCode ${json['error_msg'] ?? ''}',
+      );
     }
   }
 

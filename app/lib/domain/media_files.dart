@@ -8,11 +8,15 @@ import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 
-/// 本变更只识别音频；视频识别在 add-video-courses 里加。
 MediaKind? mediaKindOf(DriveEntry e) {
   if (e.isDirectory) return null;
   if (AppConfig.audioExtensions.contains(e.extension)) return MediaKind.audio;
+  if (AppConfig.videoExtensions.contains(e.extension)) return MediaKind.video;
   return null;
 }
+
+/// 含视频的合集是课程，否则是有声书（add-video-courses D4）。
+SeriesKind seriesKindOf(Iterable<MediaKind> kinds) =>
+    kinds.contains(MediaKind.video) ? SeriesKind.course : SeriesKind.audiobook;
 
 bool isMediaEntry(DriveEntry e) => mediaKindOf(e) != null;

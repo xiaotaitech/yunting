@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/core/logging.dart';
@@ -14,9 +17,31 @@ import 'package:yun_audiobook/domain/entities.dart';
 /// 合规边界（design.md D8）：本类只调用「读取当前授权用户本人文件」的接口。
 /// 代码里刻意不存在任何分享类接口、分享链接解析或访问他人网盘的路径。
 class BaiduDriveSource implements CloudDriveSource {
-  BaiduDriveSource(this._api);
+  BaiduDriveSource(
+    this._api, {
+    Future<String> Function()? videoQuality,
+    Future<Directory> Function()? hlsDir,
+    Future<void> Function(Duration)? sleep,
+  })  : _videoQuality = videoQuality ?? (() async => '720'),
+        _hlsDir = hlsDir ?? _defaultHlsDir,
+        _sleep = sleep ?? Future<void>.delayed;
 
   final BaiduApiClient _api;
+  final Future<String> Function() _videoQuality;
+  final Future<Directory> Function() _hlsDir;
+  final Future<void> Function(Duration) _sleep;
+
+  /// 转码流的分片地址实测约 8 小时失效，保守按 7 小时算。
+  static const Duration hlsTtl = Duration(hours: 7);
+
+  /// 取转码流用的 UA。百度的视频接口按「xpanvideo;应用;版本;平台;系统版本;ts」识别客户端。
+  static const videoUserAgent = 'xpanvideo;yunting;1.0;android-android;14;ts';
+
+  static Future<Directory> _defaultHlsDir() async {
+    final dir = Directory(p.join((await getTemporaryDirectory()).path, 'hls'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir;
+  }
 
   /// dlink 的保守有效期。百度声明的时效更长，但我们宁可提前重取，
   /// 也不要在播放中途才发现链接已死（design.md D3）。
@@ -91,7 +116,17 @@ class BaiduDriveSource implements CloudDriveSource {
   }
 
   @override
-  Future<ResolvedMedia> resolveMedia(String fsId) async {
+  Future<ResolvedMedia> resolveMedia(
+    String fsId, {
+    String? path,
+    MediaKind kind = MediaKind.audio,
+  }) async {
+    if (kind == MediaKind.video) {
+      if (path == null) {
+        throw const DriveException(DriveErrorKind.api, '视频取流需要文件路径');
+      }
+      return _resolveVideo(fsId, path);
+    }
     final json = await _metas([fsId], wantDlink: true);
     final list = (json['list'] as List?) ?? const [];
     if (list.isEmpty) {
@@ -100,7 +135,9 @@ class BaiduDriveSource implements CloudDriveSource {
     final dlink = (list.first as Map<String, dynamic>)['dlink'] as String?;
     if (dlink == null || dlink.isEmpty) {
       throw const DriveException(
-          DriveErrorKind.api, 'filemetas 未返回 dlink，请确认应用已开通下载权限',);
+        DriveErrorKind.api,
+        'filemetas 未返回 dlink，请确认应用已开通下载权限',
+      );
     }
     return ResolvedMedia(
       url: await _api.authorizedUrl(dlink),
@@ -108,6 +145,84 @@ class BaiduDriveSource implements CloudDriveSource {
       expiresAt: DateTime.now().add(dlinkTtl),
       // 播放器必须用同一个 UA 请求，否则大文件会被拒。
       headers: const {'User-Agent': AppConfig.panUserAgent},
+    );
+  }
+
+  /// 视频走转码流（add-video-courses D1）。
+  ///
+  /// 原文件 dlink 对非会员只有约 94 KB/s，而课程原片约 2.2 Mbps，根本播不动；
+  /// 转码后的 720p 约 240 kbps，实测下载速度是播放所需的 7 倍。
+  ///
+  /// 非会员第一次请求拿不到 M3U8，而是 `errno=133` + `adTime`（秒）+ `adToken`：
+  /// 等够 adTime 再带上 adToken 重请求才给。会员直接给 M3U8。
+  ///
+  /// M3U8 写成本地文件交给播放器，分片地址仍指向百度——不在本机起 HTTP 代理，
+  /// 那会撞上 Android 9+ 禁止明文流量（音频那边就踩过）。
+  Future<ResolvedMedia> _resolveVideo(String fsId, String path) async {
+    final query = {
+      'method': 'streaming',
+      'path': path,
+      'type': 'M3U8_AUTO_${await _videoQuality()}',
+    };
+    const headers = {'User-Agent': videoUserAgent};
+    var body = await _api.getText('/xpan/file', query, headers: headers);
+    if (!_isPlaylist(body)) {
+      final j = _decode(body);
+      final errno = (j['errno'] as num?)?.toInt() ?? -1;
+      final adToken = j['adToken'] as String?;
+      if (errno != 133 || adToken == null) {
+        throw _streamingError(errno, j);
+      }
+      final adTime = (j['adTime'] as num?)?.toInt() ?? 0;
+      Log.d('baidu', '非会员取流：等待 $adTime 秒');
+      await _sleep(Duration(milliseconds: adTime * 1000 + 300));
+      body = await _api.getText(
+        '/xpan/file',
+        {...query, 'adToken': adToken, 'nom3u8': '0'},
+        headers: headers,
+      );
+      if (!_isPlaylist(body)) {
+        final j2 = _decode(body);
+        throw _streamingError((j2['errno'] as num?)?.toInt() ?? -1, j2);
+      }
+    }
+    final file = File(p.join((await _hlsDir()).path, '$fsId.m3u8'))
+      ..writeAsStringSync(body);
+    return ResolvedMedia(
+      url: Uri.file(file.path).toString(),
+      // 播放列表在本地，分片是远程的、会过期：不能当本地文件对待
+      isLocal: false,
+      expiresAt: DateTime.now().add(hlsTtl),
+      kind: StreamKind.hls,
+      mediaKind: MediaKind.video,
+    );
+  }
+
+  static bool _isPlaylist(String body) => body.trimLeft().startsWith('#EXTM3U');
+
+  static Map<String, dynamic> _decode(String body) {
+    try {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } on Object {
+      return const {};
+    }
+  }
+
+  static DriveException _streamingError(int errno, Map<String, dynamic> j) {
+    // 31341：视频还在转码（刚上传的大文件常见），稍后再试即可
+    if (errno == 31341) {
+      return DriveException(
+        DriveErrorKind.rateLimited,
+        '视频正在转码，请稍后再试（errno=$errno）',
+        errno: errno,
+      );
+    }
+    if (errno > 0 || errno < -1) {
+      return DriveException.fromErrno(errno, context: '转码流');
+    }
+    return DriveException(
+      DriveErrorKind.api,
+      '转码流返回了非预期内容：${j.isEmpty ? '非 JSON' : j}',
     );
   }
 
@@ -198,8 +313,10 @@ class BaiduDriveSource implements CloudDriveSource {
 
   // ------------------------------------------------------- 内部
 
-  Future<Map<String, dynamic>> _metas(List<String> fsIds,
-      {required bool wantDlink,}) {
+  Future<Map<String, dynamic>> _metas(
+    List<String> fsIds, {
+    required bool wantDlink,
+  }) {
     return _api.getJson('/xpan/multimedia', {
       'method': 'filemetas',
       'fsids': jsonEncode(fsIds.map(int.parse).toList()),

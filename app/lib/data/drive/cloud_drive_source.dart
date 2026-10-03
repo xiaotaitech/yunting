@@ -53,6 +53,7 @@ class ResolvedMedia {
     required this.isLocal,
     required this.expiresAt,
     this.kind = StreamKind.progressive,
+    this.mediaKind = MediaKind.audio,
     this.headers = const {},
   });
 
@@ -60,6 +61,9 @@ class ResolvedMedia {
   final bool isLocal;
   final DateTime expiresAt;
   final StreamKind kind;
+
+  /// 用哪个播放内核：音频走 just_audio，视频走 video_player。
+  final MediaKind mediaKind;
   final Map<String, String> headers;
 
   bool get isStale => !isLocal && DateTime.now().isAfter(expiresAt);
@@ -79,8 +83,15 @@ abstract class CloudDriveSource {
   /// 「课程导学」「八段锦」都搜不到），而按类别列全盘 1600+ 个文件只要 1.4 秒。
   Future<List<DriveEntry>> listMediaFiles(MediaKind kind);
 
-  /// 取文件元信息（含可播放地址）。返回的地址有时效，禁止持久化。
-  Future<ResolvedMedia> resolveMedia(String fsId);
+  /// 取可播放地址。返回的地址有时效，禁止持久化。
+  ///
+  /// 音频是整文件直链（dlink）；视频走转码流（M3U8），百度的转码接口按路径取，
+  /// 所以视频必须给 [path]。
+  Future<ResolvedMedia> resolveMedia(
+    String fsId, {
+    String? path,
+    MediaKind kind = MediaKind.audio,
+  });
 
   /// 批量取文件元信息，用于认领整个文件夹时减少往返。
   Future<Map<String, DriveEntry>> fetchMetadata(List<String> fsIds);

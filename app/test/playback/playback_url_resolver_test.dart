@@ -15,7 +15,11 @@ class FakeDrive implements CloudDriveSource {
   String get id => 'fake';
 
   @override
-  Future<ResolvedMedia> resolveMedia(String fsId) async {
+  Future<ResolvedMedia> resolveMedia(
+    String fsId, {
+    String? path,
+    MediaKind kind = MediaKind.audio,
+  }) async {
     resolveCalls++;
     return ResolvedMedia(
       url: 'https://cdn.example.com/$fsId?token=v$resolveCalls',

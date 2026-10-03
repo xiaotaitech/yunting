@@ -38,20 +38,28 @@ class SeriesHeader extends StatelessWidget {
               children: [
                 Text(series.title, style: theme.textTheme.titleLarge),
                 if (series.author != null)
-                  Text(series.author!,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: theme.hintColor),),
+                  Text(
+                    series.author!,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.hintColor),
+                  ),
                 const SizedBox(height: 8),
-                Text(l.detailSummary(episodes.length, unit, formatBytes(total)),
-                    style: theme.textTheme.bodySmall,),
-                Text(l.detailOfflineCount(cached, episodes.length, unit),
-                    style: theme.textTheme.bodySmall,),
+                Text(
+                  l.detailSummary(episodes.length, unit, formatBytes(total)),
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  l.detailOfflineCount(cached, episodes.length, unit),
+                  style: theme.textTheme.bodySmall,
+                ),
                 if (series.sourceMissing)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(l.detailSourceMissing,
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: theme.colorScheme.error),),
+                    child: Text(
+                      l.detailSourceMissing,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.error),
+                    ),
                   ),
               ],
             ),

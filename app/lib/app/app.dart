@@ -25,9 +25,7 @@ class YunApp extends ConsumerWidget {
     final boot = ref.watch(bootstrapProvider);
     if (!boot.hasValue) {
       return _plain(
-        boot.hasError
-            ? _BootError(error: boot.error!)
-            : const _Splash(),
+        boot.hasError ? _BootError(error: boot.error!) : const _Splash(),
       );
     }
     return MaterialApp.router(

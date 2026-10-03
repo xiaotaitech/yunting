@@ -2,8 +2,7 @@
 /// 不硬编码进源码（tasks.md 1.6）。AppSecret 永远不会出现在客户端。
 class AppConfig {
   /// 百度网盘开放平台的 AppKey（client_id）。仅 AppKey，绝无 SecretKey。
-  static const String baiduAppKey =
-      String.fromEnvironment('BAIDU_APP_KEY');
+  static const String baiduAppKey = String.fromEnvironment('BAIDU_APP_KEY');
 
   /// OAuth 代理基址，例如 http://192.168.1.10:8787
   static const String oauthProxyBase =
@@ -15,8 +14,7 @@ class AppConfig {
   /// 真实播放、进度记忆、倍速、睡眠定时都是真的在跑，只是音频来自本地生成。
   /// 它同时也是 `CloudDriveSource` 抽象（design.md D9）的第一个非百度实现，
   /// 顺带证明了那层抽象确实是可替换的。
-  static const bool demoMode =
-      bool.fromEnvironment('DEMO_MODE');
+  static const bool demoMode = bool.fromEnvironment('DEMO_MODE');
 
   /// 网盘中存放同步状态的应用专属目录（design.md D5）。
   static const String appFolderName = 'yun_audiobook';
@@ -31,15 +29,49 @@ class AppConfig {
 
   /// 本项目的开源仓库，同时也是发布渠道：应用内检查更新读它的 Releases 与 dist 分支的 latest.json
   /// （app-distribution 规格）。fork 后自己发版时，发布工作流会把仓库名传进来。
-  static const String releaseRepo = String.fromEnvironment('RELEASE_REPO',
-      defaultValue: 'xiaotaitech/yunting',);
+  static const String releaseRepo = String.fromEnvironment(
+    'RELEASE_REPO',
+    defaultValue: 'xiaotaitech/yunting',
+  );
 
   static const List<String> audioExtensions = [
-    'mp3', 'm4a', 'm4b', 'aac', 'flac', 'ogg', 'wav', 'wma', 'opus',
+    'mp3',
+    'm4a',
+    'm4b',
+    'aac',
+    'flac',
+    'ogg',
+    'wav',
+    'wma',
+    'opus',
+  ];
+
+  /// 课程视频。百度转码流支持的常见格式都列上；rmvb 之类老格式百度也能转。
+  static const List<String> videoExtensions = [
+    'mp4',
+    'mkv',
+    'mov',
+    'avi',
+    'flv',
+    'wmv',
+    'm4v',
+    'webm',
+    'ts',
+    'mpg',
+    'mpeg',
+    'rmvb',
+    'rm',
+    '3gp',
+    'vob',
   ];
 
   static const List<String> coverFileNames = [
-    'cover', 'folder', 'front', 'album', 'poster', 'default',
+    'cover',
+    'folder',
+    'front',
+    'album',
+    'poster',
+    'default',
   ];
 
   static const List<String> imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];

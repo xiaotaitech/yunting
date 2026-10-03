@@ -28,3 +28,6 @@ linter:
     cascade_invocations: false
     async_return_with_no_await: false
     prefer_foreach: false
+    # 尾随逗号交给 dart format（Dart 3 的 tall 风格自己决定加不加），
+    # 这条 lint 与格式化结果互相打架，格式化一遍就又冒出来。
+    require_trailing_commas: false

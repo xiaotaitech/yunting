@@ -17,13 +17,17 @@ int countTokens(String url) => _tokenParam.allMatches(url).length;
 void main() {
   group('dlink 令牌拼接', () {
     test('无 query 时用 ? 起头', () {
-      expect(appendToken('https://d.pcs.baidu.com/file/abc', 't1'),
-          'https://d.pcs.baidu.com/file/abc?access_token=t1',);
+      expect(
+        appendToken('https://d.pcs.baidu.com/file/abc', 't1'),
+        'https://d.pcs.baidu.com/file/abc?access_token=t1',
+      );
     });
 
     test('已有 query 时用 & 追加', () {
-      expect(appendToken('https://d.pcs.baidu.com/file/abc?fid=9', 't1'),
-          'https://d.pcs.baidu.com/file/abc?fid=9&access_token=t1',);
+      expect(
+        appendToken('https://d.pcs.baidu.com/file/abc?fid=9', 't1'),
+        'https://d.pcs.baidu.com/file/abc?fid=9&access_token=t1',
+      );
     });
 
     test('已带令牌时替换而不是追加，避免出现两个 access_token', () {

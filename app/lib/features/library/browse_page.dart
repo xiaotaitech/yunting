@@ -102,9 +102,10 @@ class _EmptyFolder extends StatelessWidget {
         children: [
           Icon(Icons.folder_open, size: 56, color: theme.hintColor),
           const SizedBox(height: 12),
-          Text(context.l10n.browseEmptyFolder,
-              style:
-                  theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),),
+          Text(
+            context.l10n.browseEmptyFolder,
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+          ),
         ],
       ),
     );

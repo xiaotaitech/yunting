@@ -98,7 +98,8 @@ class LibrarySync {
     if (raw == null || raw.trim().isEmpty) return null;
     try {
       return LibrarySnapshot.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>,);
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
     } on Object catch (e) {
       // 远端文件损坏时不能让同步永久卡死，本地照常运行、下次覆盖它
       Log.e('sync', '远端状态文件无法解析，将以本地为准', e);
@@ -118,8 +119,7 @@ class LibrarySync {
     final kinds = {for (final b in local.books) b.id: b.kind};
     return merged.copyWith(
       books: [
-        for (final b in merged.books)
-          b.copyWith(kind: kinds[b.id] ?? b.kind),
+        for (final b in merged.books) b.copyWith(kind: kinds[b.id] ?? b.kind),
       ],
     );
   }
@@ -159,9 +159,9 @@ class LibrarySync {
         // SQLite 的 REPLACE 是「先 DELETE 旧行再 INSERT」，而 chapters 表对
         // books 有 ON DELETE CASCADE——那样每同步一次就会把这本书的章节和
         // 离线缓存记录全部删光。实测过：同步后 chapters 表直接清零。
-        final updated =
-            await (_db.update(books)..where((b) => b.id.equals(r.id)))
-                .write(values);
+        final updated = await (_db.update(books)
+              ..where((b) => b.id.equals(r.id)))
+            .write(values);
         if (updated == 0) {
           await _db.into(books).insert(
                 values.copyWith(

@@ -11,6 +11,7 @@ import 'package:yun_audiobook/features/library/library_controller.dart';
 import 'package:yun_audiobook/features/player/widgets/player_actions.dart';
 import 'package:yun_audiobook/features/player/widgets/position_bar.dart';
 import 'package:yun_audiobook/features/player/widgets/transport_controls.dart';
+import 'package:yun_audiobook/features/player/widgets/video_surface.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
 
@@ -148,21 +149,27 @@ class _PlayerBody extends StatelessWidget {
             // 横屏上糊成一整块。
             Expanded(
               child: Center(
-                child: LayoutBuilder(
-                  builder: (context, box) {
-                    final side = math.min<double>(
-                      math.min<double>(box.maxWidth * 0.64, box.maxHeight),
-                      300,
-                    );
-                    return SeriesCover(
-                      title: series.title,
-                      coverFsId: series.coverFsId,
-                      width: side,
-                      height: side,
-                      radius: 18,
-                    );
-                  },
-                ),
+                // 课程条目显示画面（可全屏）；有声书显示封面
+                child: episode.mediaKind == MediaKind.video
+                    ? const VideoSurface()
+                    : LayoutBuilder(
+                        builder: (context, box) {
+                          final side = math.min<double>(
+                            math.min<double>(
+                              box.maxWidth * 0.64,
+                              box.maxHeight,
+                            ),
+                            300,
+                          );
+                          return SeriesCover(
+                            title: series.title,
+                            coverFsId: series.coverFsId,
+                            width: side,
+                            height: side,
+                            radius: 18,
+                          );
+                        },
+                      ),
               ),
             ),
             Text(

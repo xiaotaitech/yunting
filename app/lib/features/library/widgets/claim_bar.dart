@@ -69,10 +69,17 @@ class _ClaimBarState extends ConsumerState<ClaimBar> {
       // 直接回到书架：原来只退一层，从「我的有声书/三体」加完书还得连按几次返回，
       // 按多了就退出了应用
       context.go(Routes.shelf);
-      messenger.showSnackBar(SnackBar(
-        content: Text(l.browseAdded(
-            series.title, series.episodeCount, l.unit(series.kind),),),
-      ),);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            l.browseAdded(
+              series.title,
+              series.episodeCount,
+              l.unit(series.kind),
+            ),
+          ),
+        ),
+      );
     } on DriveException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l.driveError(e))));
     } finally {
@@ -96,8 +103,10 @@ class _ClaimBarState extends ConsumerState<ClaimBar> {
             ? Row(
                 children: [
                   Expanded(
-                    child: Text(l.browseAlreadyOnShelf(existing.title),
-                        style: theme.textTheme.bodySmall,),
+                    child: Text(
+                      l.browseAlreadyOnShelf(existing.title),
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ),
                   FilledButton.tonal(
                     onPressed: () => context.push(Routes.series(existing.id)),
@@ -118,11 +127,13 @@ class _ClaimBarState extends ConsumerState<ClaimBar> {
                   ),
                   FilledButton.tonal(
                     onPressed: _canClaim && !_busy ? _claim : null,
-                    child: Text(_busy
-                        ? l.browseBusy
-                        : _looksLikeLibrary
-                            ? l.browseClaimAnyway
-                            : l.browseClaim,),
+                    child: Text(
+                      _busy
+                          ? l.browseBusy
+                          : _looksLikeLibrary
+                              ? l.browseClaimAnyway
+                              : l.browseClaim,
+                    ),
                   ),
                 ],
               ),

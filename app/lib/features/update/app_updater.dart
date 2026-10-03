@@ -106,8 +106,10 @@ class AppUpdater {
     Object last = const UpdateException('没有可用的镜像');
     for (final url in mirrors) {
       try {
-        final res = await _client.get(Uri.parse(url),
-            headers: {'User-Agent': 'Yunting'},).timeout(_timeout);
+        final res = await _client.get(
+          Uri.parse(url),
+          headers: {'User-Agent': 'Yunting'},
+        ).timeout(_timeout);
         if (res.statusCode != 200) {
           last = UpdateException('HTTP ${res.statusCode}');
           continue;
@@ -215,6 +217,7 @@ class _Result<T> {
   final Object? error;
 }
 
-Future<_Result<T>> _capture<T>(Future<T> f) =>
-    f.then((v) => _Result<T>(v, null),
-        onError: (Object e) => _Result<T>(null, e),);
+Future<_Result<T>> _capture<T>(Future<T> f) => f.then(
+      (v) => _Result<T>(v, null),
+      onError: (Object e) => _Result<T>(null, e),
+    );

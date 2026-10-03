@@ -18,8 +18,10 @@ class PlaybackUrlResolver {
   /// 解析章节的播放地址。
   ///
   /// [forceRefresh] 用于播放中断后的恢复：作废旧地址并强制重取。
-  Future<ResolvedMedia> resolve(Episode episode,
-      {bool forceRefresh = false,}) async {
+  Future<ResolvedMedia> resolve(
+    Episode episode, {
+    bool forceRefresh = false,
+  }) async {
     // 本地缓存优先（offline-cache 规格「本地缓存优先」）
     final local = episode.localPath;
     if (episode.isCached && local != null && File(local).existsSync()) {
@@ -35,7 +37,11 @@ class PlaybackUrlResolver {
       if (cached != null && !cached.isStale) return cached;
     }
 
-    final resolved = await _drive.resolveMedia(episode.fsId);
+    final resolved = await _drive.resolveMedia(
+      episode.fsId,
+      path: episode.path,
+      kind: episode.mediaKind,
+    );
     _cache[episode.fsId] = resolved;
     Log.d('resolver', '已解析播放地址：${episode.title}');
     return resolved;
@@ -55,7 +61,13 @@ class PlaybackUrlResolver {
     final cached = _cache[episode.fsId];
     if (cached != null && !cached.isStale) return;
     try {
-      _cache[episode.fsId] = await _drive.resolveMedia(episode.fsId);
+      // 视频也预取：非会员取流要等 8 秒广告，在上一课播放期间等掉，
+      // 自动续下一课时就不用再干等
+      _cache[episode.fsId] = await _drive.resolveMedia(
+        episode.fsId,
+        path: episode.path,
+        kind: episode.mediaKind,
+      );
       Log.d('resolver', '已预取下一章地址：${episode.title}');
     } on Object catch (e) {
       // 预取失败无所谓，真正播放时会再解析一次

@@ -17,11 +17,13 @@ class DriveEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAudio = isMediaEntry(entry);
     return ListTile(
-      leading: Icon(entry.isDirectory
-          ? Icons.folder
-          : isAudio
-              ? Icons.audiotrack
-              : Icons.insert_drive_file_outlined,),
+      leading: Icon(
+        entry.isDirectory
+            ? Icons.folder
+            : isAudio
+                ? Icons.audiotrack
+                : Icons.insert_drive_file_outlined,
+      ),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: entry.isDirectory ? null : Text(formatBytes(entry.size)),
       trailing: entry.isDirectory ? const Icon(Icons.chevron_right) : null,

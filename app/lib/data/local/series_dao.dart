@@ -11,14 +11,13 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
 
   // ------------------------------------------------------------ 合集
 
-  SimpleSelectStatement<$BooksTable, BookRow> _shelfQuery() =>
-      select(books)
-        ..where((b) => b.deleted.equals(false))
-        ..orderBy([
-          (b) => OrderingTerm.desc(
-                coalesce([b.lastPlayedAt, b.addedAt]),
-              ),
-        ]);
+  SimpleSelectStatement<$BooksTable, BookRow> _shelfQuery() => select(books)
+    ..where((b) => b.deleted.equals(false))
+    ..orderBy([
+      (b) => OrderingTerm.desc(
+            coalesce([b.lastPlayedAt, b.addedAt]),
+          ),
+    ]);
 
   Future<List<Series>> shelf() async =>
       (await _shelfQuery().get()).map(_toSeries).toList();
@@ -28,8 +27,8 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
       _shelfQuery().watch().map((rows) => rows.map(_toSeries).toList());
 
   Future<Series?> seriesById(String id) async {
-    final row = await (select(books)..where((b) => b.id.equals(id)))
-        .getSingleOrNull();
+    final row =
+        await (select(books)..where((b) => b.id.equals(id))).getSingleOrNull();
     return row == null ? null : _toSeries(row);
   }
 

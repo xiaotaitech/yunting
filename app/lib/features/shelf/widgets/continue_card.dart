@@ -74,14 +74,19 @@ class _ContinueCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.headphones,
-                      size: 16, color: theme.colorScheme.onPrimaryContainer,),
+                  Icon(
+                    Icons.headphones,
+                    size: 16,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
                   const SizedBox(width: 6),
-                  Text(l.shelfContinue,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),),
+                  Text(
+                    l.shelfContinue,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -92,13 +97,18 @@ class _ContinueCard extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 10),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline,
-                          size: 14, color: theme.colorScheme.error,),
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: theme.colorScheme.error,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(l.notReady(reason),
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: theme.colorScheme.error),),
+                        child: Text(
+                          l.notReady(reason),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.colorScheme.error),
+                        ),
                       ),
                     ],
                   ),
@@ -144,13 +154,15 @@ class _CardBody extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(series.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),),
+              Text(
+                series.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 _subtitle(l, entry),
@@ -206,6 +218,9 @@ class _CardBody extends ConsumerWidget {
     return total == null
         ? l.shelfContinueListenedTo(episode.title, position)
         : l.shelfContinueProgress(
-            episode.title, position, formatDuration(total),);
+            episode.title,
+            position,
+            formatDuration(total),
+          );
   }
 }

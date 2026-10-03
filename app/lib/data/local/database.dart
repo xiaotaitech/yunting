@@ -32,14 +32,12 @@ class Books extends Table {
   IntColumn get chapterCount => integer().withDefault(const Constant(0))();
   IntColumn get currentChapterIndex =>
       integer().withDefault(const Constant(0))();
-  IntColumn get currentPositionMs =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get currentPositionMs => integer().withDefault(const Constant(0))();
   BoolColumn get finished => boolean().withDefault(const Constant(false))();
   BoolColumn get sourceMissing =>
       boolean().withDefault(const Constant(false))();
   BoolColumn get titleEdited => boolean().withDefault(const Constant(false))();
-  BoolColumn get authorEdited =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get authorEdited => boolean().withDefault(const Constant(false))();
   BoolColumn get orderEdited => boolean().withDefault(const Constant(false))();
   IntColumn get addedAt => integer()();
   IntColumn get updatedAt => integer()();
@@ -104,7 +102,8 @@ class SyncMeta extends Table {
 ///    书名也可能被用户改掉。历史要记的是「当时听的是什么」。
 @DataClassName('HistoryRow')
 @TableIndex.sql(
-    'CREATE INDEX idx_history_last_at ON play_history(last_at DESC)',)
+  'CREATE INDEX idx_history_last_at ON play_history(last_at DESC)',
+)
 class PlayHistory extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get bookId => text()();

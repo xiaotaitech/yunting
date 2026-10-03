@@ -96,8 +96,11 @@ class DownloadManager {
     final dir = await _seriesDir(episode.seriesId);
     final part = File(p.join(dir.path, '${episode.fsId}.part'));
     if (part.existsSync()) part.deleteSync();
-    await _dao.setCache(episode.id,
-        state: CacheState.none, downloadedBytes: 0,);
+    await _dao.setCache(
+      episode.id,
+      state: CacheState.none,
+      downloadedBytes: 0,
+    );
   }
 
   Future<void> _pump() async {
@@ -120,8 +123,12 @@ class DownloadManager {
     final episode = task.episode;
     final dir = await _seriesDir(episode.seriesId);
     final partFile = File(p.join(dir.path, '${episode.fsId}.part'));
-    final finalFile = File(p.join(
-        dir.path, '${episode.fsId}${p.extension(episode.fileName)}',),);
+    final finalFile = File(
+      p.join(
+        dir.path,
+        '${episode.fsId}${p.extension(episode.fileName)}',
+      ),
+    );
 
     if (finalFile.existsSync() && finalFile.lengthSync() == episode.size) {
       await _markCached(episode, finalFile);
@@ -157,7 +164,8 @@ class DownloadManager {
         await _ensureSpace(episode.size - already);
 
         // 下载途中 dlink 过期，重新解析后从已下载位置继续（规格「下载中 dlink 过期」）
-        final media = await _resolver.resolve(episode, forceRefresh: attempt > 1);
+        final media =
+            await _resolver.resolve(episode, forceRefresh: attempt > 1);
         final stream = await _drive.openStream(media, start: already);
 
         final sink = partFile.openWrite(mode: FileMode.append);
@@ -174,9 +182,11 @@ class DownloadManager {
             // 进度条不需要那个精度，每秒一次足够。
             if (DateTime.now().difference(lastReport) >= _progressInterval) {
               lastReport = DateTime.now();
-              await _dao.setCache(episode.id,
-                  state: CacheState.downloading,
-                  downloadedBytes: task.received,);
+              await _dao.setCache(
+                episode.id,
+                state: CacheState.downloading,
+                downloadedBytes: task.received,
+              );
             }
           }
         } finally {
@@ -190,7 +200,8 @@ class DownloadManager {
         // 大小对不上说明是被截断的半成品，不能当完整缓存
         // （规格「设备存储不足」的反面要求）
         if (episode.size > 0 && downloaded < episode.size) {
-          Log.d('download', '${episode.title} 未下完（$downloaded/${episode.size}），重试');
+          Log.d('download',
+              '${episode.title} 未下完（$downloaded/${episode.size}），重试');
           continue;
         }
         await partFile.rename(finalFile.path);
@@ -215,10 +226,12 @@ class DownloadManager {
   }
 
   Future<void> _markCached(Episode episode, File file) async {
-    await _dao.setCache(episode.id,
-        state: CacheState.cached,
-        localPath: file.path,
-        downloadedBytes: file.lengthSync(),);
+    await _dao.setCache(
+      episode.id,
+      state: CacheState.cached,
+      localPath: file.path,
+      downloadedBytes: file.lengthSync(),
+    );
     Log.d('download', '已缓存：${episode.title}');
   }
 
@@ -255,8 +268,11 @@ class DownloadManager {
     final dir = await _seriesDir(seriesId);
     if (dir.existsSync()) dir.deleteSync(recursive: true);
     for (final c in await _dao.episodesOf(seriesId)) {
-      await _dao.setCache(c.id,
-          state: CacheState.none, downloadedBytes: 0,);
+      await _dao.setCache(
+        c.id,
+        state: CacheState.none,
+        downloadedBytes: 0,
+      );
     }
     Log.d('download', '已清理缓存：$seriesId');
   }
@@ -286,6 +302,4 @@ class DownloadManager {
       Log.d('download', '配额清理：《${series.title}》释放 $freed 字节');
     }
   }
-
-  
 }

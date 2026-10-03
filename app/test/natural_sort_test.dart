@@ -33,7 +33,8 @@ void main() {
 
     test('超长数字不会溢出', () {
       expect(
-        compareNatural('a99999999999999999999.mp3', 'a100000000000000000000.mp3'),
+        compareNatural(
+            'a99999999999999999999.mp3', 'a100000000000000000000.mp3'),
         lessThan(0),
       );
     });

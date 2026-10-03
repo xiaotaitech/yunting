@@ -16,8 +16,7 @@ List<DriveEntry> sortForBrowse(List<DriveEntry> entries) {
 void main() {
   group('目录浏览排序', () {
     test('文件按自然序，第10章不能排到第1章前面', () async {
-      final entries =
-          await DemoDriveSource().listDirectory('/我的有声书/三体');
+      final entries = await DemoDriveSource().listDirectory('/我的有声书/三体');
       final names = sortForBrowse(entries)
           .where((e) => e.name.endsWith('.mp3'))
           .map((e) => e.name)
@@ -41,8 +40,7 @@ void main() {
     });
 
     test('浏览顺序与认领成书后的章节顺序一致', () async {
-      final entries =
-          await DemoDriveSource().listDirectory('/我的有声书/三体');
+      final entries = await DemoDriveSource().listDirectory('/我的有声书/三体');
       final browseOrder = sortForBrowse(entries)
           .where((e) => e.name.endsWith('.mp3'))
           .map((e) => e.name)
@@ -55,8 +53,11 @@ void main() {
           .toList()
         ..sort(compareNatural);
 
-      expect(browseOrder, chapterOrder,
-          reason: '同一批文件在两个界面必须是同一个顺序',);
+      expect(
+        browseOrder,
+        chapterOrder,
+        reason: '同一批文件在两个界面必须是同一个顺序',
+      );
     });
   });
 }

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -30,7 +31,17 @@ class DemoDriveSource implements CloudDriveSource {
   static final Map<String, List<_Node>> _tree = {
     '/': [
       _Node.dir('/我的有声书'),
+      _Node.dir('/我的课程'),
       _Node.dir('/照片'),
+    ],
+    '/我的课程': [
+      _Node.dir('/我的课程/英语入门'),
+    ],
+    // 课程演示：三课共用一段随包的小 HLS 视频（assets/demo_video，ffmpeg 生成，约 24 秒）
+    '/我的课程/英语入门': [
+      _Node.file('/我的课程/英语入门/第1课 发音.mp4', 4001, isVideo: true),
+      _Node.file('/我的课程/英语入门/第2课 单词.mp4', 4002, isVideo: true),
+      _Node.file('/我的课程/英语入门/第3课 句型.mp4', 4003, isVideo: true),
     ],
     '/我的有声书': [
       _Node.dir('/我的有声书/三体'),
@@ -86,10 +97,25 @@ class DemoDriveSource implements CloudDriveSource {
   }
 
   @override
-  Future<ResolvedMedia> resolveMedia(String fsId) async {
+  Future<ResolvedMedia> resolveMedia(
+    String fsId, {
+    String? path,
+    MediaKind kind = MediaKind.audio,
+  }) async {
     final node = _find(fsId);
     if (node == null || node.isDirectory) {
       throw DriveException(DriveErrorKind.notFound, '演示网盘里没有这个文件（$fsId）');
+    }
+    if (kind == MediaKind.video) {
+      // 和真实百度一样给一份「本地 M3U8」，走同一条 HLS 播放路径；
+      // 只是这里的分片也在本地，演示不联网。
+      return ResolvedMedia(
+        url: Uri.file((await _ensureDemoVideo()).path).toString(),
+        isLocal: false,
+        expiresAt: DateTime.now().add(const Duration(days: 3650)),
+        kind: StreamKind.hls,
+        mediaKind: MediaKind.video,
+      );
     }
     final file = await _ensureAudio(node);
     return ResolvedMedia(
@@ -111,6 +137,30 @@ class DemoDriveSource implements CloudDriveSource {
     final end = math.min(endInclusive + 1, bytes.length);
     if (start >= end) return const [];
     return bytes.sublist(start, end);
+  }
+
+  static const _demoVideoFiles = [
+    'lesson.m3u8',
+    'seg0.ts',
+    'seg1.ts',
+    'seg2.ts',
+    'seg3.ts',
+  ];
+
+  /// 把随包的演示 HLS 拷到临时目录（播放器只认文件路径，不认 asset）。
+  /// 播放列表里的分片是相对路径，与 m3u8 同目录即可。
+  Future<File> _ensureDemoVideo() async {
+    final dir =
+        Directory(p.join((await getTemporaryDirectory()).path, 'demo_video'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    for (final name in _demoVideoFiles) {
+      final f = File(p.join(dir.path, name));
+      if (f.existsSync()) continue;
+      final data = await rootBundle.load('assets/demo_video/$name');
+      f.writeAsBytesSync(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+    }
+    return File(p.join(dir.path, 'lesson.m3u8'));
   }
 
   /// 演示网盘就在内存里：逐层走一遍目录树即可。
@@ -259,11 +309,15 @@ class _Node {
         isDirectory = true,
         size = 0;
 
-  _Node.file(this.path, int id, {bool isImage = false})
+  _Node.file(this.path, int id, {bool isImage = false, bool isVideo = false})
       : fsId = '$id',
         isDirectory = false,
-        // 音频给一个像样的体积，界面上显示出来才不违和
-        size = isImage ? 180 * 1024 : 22050 * 2 * DemoDriveSource.chapterSeconds + 44;
+        // 给一个像样的体积，界面上显示出来才不违和
+        size = isImage
+            ? 180 * 1024
+            : isVideo
+                ? 86 * 1024 * 1024
+                : 22050 * 2 * DemoDriveSource.chapterSeconds + 44;
 
   final String path;
   final String fsId;

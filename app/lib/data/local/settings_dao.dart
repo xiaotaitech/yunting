@@ -14,6 +14,10 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
   static const offlineQuotaKey = 'offline_quota_gb';
   static const offlineQuotaDefaultGb = 5;
 
+  /// 视频清晰度：'720'（默认）或 '480'。只影响之后打开的视频。
+  static const videoQualityKey = 'video_quality';
+  static const videoQualityDefault = '720';
+
   /// 自动提示过的最新版本：同一版本只自动提示一次。
   static const updateSeenKey = 'update_seen';
 

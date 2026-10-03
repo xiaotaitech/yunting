@@ -51,11 +51,13 @@ class _EpisodeListState extends ConsumerState<EpisodeList> {
           leading: CircleAvatar(
             backgroundColor:
                 isCurrent ? scheme.primary : scheme.surfaceContainerHighest,
-            child: Text('${i + 1}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isCurrent ? scheme.onPrimary : null,
-                ),),
+            child: Text(
+              '${i + 1}',
+              style: TextStyle(
+                fontSize: 12,
+                color: isCurrent ? scheme.onPrimary : null,
+              ),
+            ),
           ),
           title: Text(e.title, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text(_subtitle(context.l10n, e)),
@@ -85,6 +87,14 @@ class _EpisodeListState extends ConsumerState<EpisodeList> {
   Widget _trailing(BuildContext context, Episode e) {
     final l = context.l10n;
     final controller = ref.read(libraryControllerProvider.notifier);
+    // 视频走转码流，没有可离线的文件，不给下载入口（add-video-courses）
+    if (e.mediaKind == MediaKind.video) {
+      return Icon(
+        Icons.ondemand_video_outlined,
+        size: 20,
+        color: Theme.of(context).hintColor,
+      );
+    }
     switch (e.cacheState) {
       case CacheState.cached:
         return IconButton(

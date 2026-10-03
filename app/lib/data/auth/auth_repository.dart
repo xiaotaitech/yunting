@@ -97,14 +97,17 @@ class AuthRepository {
     final current = _cached ?? await _store.read();
     if (current == null || current.refreshToken.isEmpty) {
       await signOut();
-      throw const DriveException(DriveErrorKind.authInvalid, '缺少 refresh_token，需要重新授权');
+      throw const DriveException(
+          DriveErrorKind.authInvalid, '缺少 refresh_token，需要重新授权');
     }
-    final res = await _post('/oauth/refresh', {'refresh_token': current.refreshToken});
+    final res =
+        await _post('/oauth/refresh', {'refresh_token': current.refreshToken});
     if (res == null) {
       // refresh_token 本身失效：清凭证、跳登录，但本地书架与进度必须保留
       // （netdisk-auth 规格「refresh_token 失效」）。
       await signOut();
-      throw const DriveException(DriveErrorKind.authInvalid, 'refresh_token 已失效，请重新授权');
+      throw const DriveException(
+          DriveErrorKind.authInvalid, 'refresh_token 已失效，请重新授权');
     }
     final token = AuthToken.fromResponse(res);
     // 百度刷新响应里可能不带新的 refresh_token，此时沿用旧的。
@@ -150,7 +153,8 @@ class AuthRepository {
     while (DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(interval);
       onTick?.call();
-      final res = await _post('/oauth/device/poll', {'device_code': session.deviceCode});
+      final res = await _post(
+          '/oauth/device/poll', {'device_code': session.deviceCode});
       if (res == null) continue;
       switch (res['status'] as String?) {
         case 'ok':
@@ -163,9 +167,11 @@ class AuthRepository {
         case 'slow_down':
           interval += const Duration(seconds: 2);
         case 'denied':
-          throw const DriveException(DriveErrorKind.authInvalid, '你在授权页拒绝了本次授权');
+          throw const DriveException(
+              DriveErrorKind.authInvalid, '你在授权页拒绝了本次授权');
         case 'expired':
-          throw const DriveException(DriveErrorKind.authInvalid, '授权码已过期，请重新发起授权');
+          throw const DriveException(
+              DriveErrorKind.authInvalid, '授权码已过期，请重新发起授权');
         default:
           break; // authorization_pending：继续等
       }
@@ -181,15 +187,18 @@ class AuthRepository {
     Log.d('auth', '已退出登录（本地数据${keepLocalData ? '保留' : '清除'}）');
   }
 
-  Future<Map<String, dynamic>?> _post(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>?> _post(
+      String path, Map<String, dynamic> body) async {
     if (_proxyBase.isEmpty) {
       throw const DriveException(DriveErrorKind.api, 'OAuth 代理地址未配置');
     }
     try {
       final res = await _http
-          .post(_proxy(path),
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode(body),)
+          .post(
+            _proxy(path),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
           .timeout(const Duration(seconds: 20));
       // 只记录路径与状态码，绝不记录响应体（含令牌）。
       Log.d('auth', 'POST $path -> ${res.statusCode}');
@@ -205,7 +214,9 @@ class AuthRepository {
       rethrow;
     } on Object catch (e) {
       throw DriveException(
-          DriveErrorKind.network, '无法连接 OAuth 代理（$_proxyBase）：$e',);
+        DriveErrorKind.network,
+        '无法连接 OAuth 代理（$_proxyBase）：$e',
+      );
     }
   }
 

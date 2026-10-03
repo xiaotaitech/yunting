@@ -18,8 +18,10 @@ void main() {
 
   test('行内粗体与网址，句末中文标点不算进链接', () {
     final spans = helpSpans('**下载**：打开 https://a.b/c.apk ；或 https://x.y/z。');
-    expect(spans.map((s) => s.text).toList(),
-        ['下载', '：打开 ', 'https://a.b/c.apk', ' ；或 ', 'https://x.y/z', '。'],);
+    expect(
+      spans.map((s) => s.text).toList(),
+      ['下载', '：打开 ', 'https://a.b/c.apk', ' ；或 ', 'https://x.y/z', '。'],
+    );
     expect(spans[0].bold, isTrue);
     expect(spans[2].url, isTrue);
     expect(spans[4].url, isTrue);

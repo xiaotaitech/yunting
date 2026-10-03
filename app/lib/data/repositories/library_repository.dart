@@ -74,8 +74,10 @@ class LibraryRepository {
     final covers = entries.where(isCoverImage).toList();
     // 没有约定名的封面时，退而求其次用目录里唯一的图片
     final images = entries
-        .where((e) =>
-            !e.isDirectory && AppConfig.imageExtensions.contains(e.extension),)
+        .where(
+          (e) =>
+              !e.isDirectory && AppConfig.imageExtensions.contains(e.extension),
+        )
         .toList();
 
     return FolderScan(
@@ -149,6 +151,7 @@ class LibraryRepository {
       title: titleOverride ?? firstTags.album ?? folderName,
       author: firstTags.artist,
       coverFsId: cover?.fsId,
+      kind: seriesKindOf(episodes.map((e) => e.mediaKind)),
       episodeCount: episodes.length,
       addedAt: now,
       updatedAt: now,
@@ -158,7 +161,8 @@ class LibraryRepository {
 
     await _dao.upsertSeries(series);
     await _dao.replaceEpisodes(seriesId, episodes);
-    Log.d('library', '已认领《${series.title}》，共 ${episodes.length} 集');
+    Log.d('library',
+        '已认领《${series.title}》（${series.kind.name}），共 ${episodes.length} 集');
     return series;
   }
 
@@ -216,8 +220,10 @@ class LibraryRepository {
   /// 每个文件要花一次 dlink 解析 + 一次 Range 读取，在限速账号上并不便宜，
   /// 所以章节多时只探测前若干个——书名/作者取自首个文件就够了，
   /// 而 track 排序本来就要求全员齐备（见 [_buildEpisodes]），探不全时自然回退文件名。
-  Future<Map<String, AudioTags>> _probeTags(List<DriveEntry> files,
-      {int maxProbe = 8,}) async {
+  Future<Map<String, AudioTags>> _probeTags(
+    List<DriveEntry> files, {
+    int maxProbe = 8,
+  }) async {
     final result = <String, AudioTags>{};
     final probe = files.take(maxProbe);
     for (final f in probe) {
@@ -273,6 +279,12 @@ class LibraryRepository {
           series.id,
           _buildEpisodes(series.id, collected, tags),
         );
+      }
+      // 文件夹里新加了视频：有声书升级为课程（反过来不降级，免得课程被误判）
+      final kinds = (await _dao.episodesOf(series.id)).map((e) => e.mediaKind);
+      if (series.kind != SeriesKind.course &&
+          seriesKindOf(kinds) == SeriesKind.course) {
+        await _dao.upsertSeries(series.copyWith(kind: SeriesKind.course));
       }
       if (series.sourceMissing) await _markMissing(series, missing: false);
     } on DriveException catch (e) {

@@ -47,7 +47,11 @@ Future<Uint8List?> coverBytes(Ref ref, String fsId) async {
 /// 任何设备、任何时候都是同一个颜色（哈希只取决于书名）。
 class SeriesCover extends ConsumerWidget {
   const SeriesCover({
-    required this.title, required this.coverFsId, required this.width, required this.height, super.key,
+    required this.title,
+    required this.coverFsId,
+    required this.width,
+    required this.height,
+    super.key,
     this.radius = 10,
   });
 

@@ -50,7 +50,8 @@ class Id3Parser {
 
       final int frameSize;
       if (major == 2) {
-        frameSize = (b[offset + 3] << 16) | (b[offset + 4] << 8) | b[offset + 5];
+        frameSize =
+            (b[offset + 3] << 16) | (b[offset + 4] << 8) | b[offset + 5];
       } else if (major == 4) {
         frameSize = _syncSafe(b, offset + 4);
       } else {
@@ -127,9 +128,11 @@ class Id3Parser {
     }
     final units = <int>[];
     for (var i = 0; i + 1 < data.length; i += 2) {
-      units.add(littleEndian
-          ? data[i] | (data[i + 1] << 8)
-          : (data[i] << 8) | data[i + 1],);
+      units.add(
+        littleEndian
+            ? data[i] | (data[i + 1] << 8)
+            : (data[i] << 8) | data[i + 1],
+      );
     }
     return String.fromCharCodes(units);
   }
@@ -137,8 +140,7 @@ class Id3Parser {
   /// 文本帧常带结尾的 NUL 填充，去掉后再 trim。
   static String? clean(String? s) {
     if (s == null) return null;
-    final trimmed =
-        s.split(String.fromCharCode(_nul)).join().trim();
+    final trimmed = s.split(String.fromCharCode(_nul)).join().trim();
     return trimmed.isEmpty ? null : trimmed;
   }
 

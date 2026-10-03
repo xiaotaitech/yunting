@@ -34,7 +34,9 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
   /// 从网盘同步回来的书只有元数据和进度，条目要重新从网盘解析。
   /// 第一次打开时自动补齐，别让用户自己去菜单里点「刷新章节」。
   Future<void> _autoRefreshIfEmpty(
-      Series series, List<Episode> episodes,) async {
+    Series series,
+    List<Episode> episodes,
+  ) async {
     if (_autoRefreshed || episodes.isNotEmpty || series.sourceMissing) return;
     _autoRefreshed = true;
     await _library.refresh(series);
@@ -64,9 +66,14 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
             itemBuilder: (_) => [
               PopupMenuItem(value: 'edit', child: Text(l.detailMenuEdit)),
               PopupMenuItem(value: 'refresh', child: Text(l.detailMenuRefresh)),
-              PopupMenuItem(
-                  value: 'download', child: Text(l.detailMenuDownload),),
-              PopupMenuItem(value: 'clear', child: Text(l.detailMenuClear)),
+              // 纯视频的课程没有可离线的内容，下载与清缓存都不出现
+              if (series.kind != SeriesKind.course) ...[
+                PopupMenuItem(
+                  value: 'download',
+                  child: Text(l.detailMenuDownload),
+                ),
+                PopupMenuItem(value: 'clear', child: Text(l.detailMenuClear)),
+              ],
               PopupMenuItem(value: 'remove', child: Text(l.detailMenuRemove)),
             ],
           ),
@@ -120,9 +127,11 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
       case 'download':
         await _library.downloadAll(series);
         final count = ref.read(episodesProvider(series.id)).value?.length ?? 0;
-        messenger.showSnackBar(SnackBar(
-          content: Text(l.detailDownloadQueued(count, l.unit(series.kind))),
-        ),);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l.detailDownloadQueued(count, l.unit(series.kind))),
+          ),
+        );
       case 'clear':
         await _library.clearCache(series);
         messenger.showSnackBar(SnackBar(content: Text(l.detailCacheCleared)));

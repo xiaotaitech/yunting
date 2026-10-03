@@ -16,9 +16,11 @@ class SyncButton extends ConsumerWidget {
     // 同步的重点恰恰是「拉回了新东西」：报同步之后书架上的数量。
     final books =
         await ref.read(libraryControllerProvider.notifier).shelfOnce();
-    messenger.showSnackBar(SnackBar(
-      content: Text(ok ? l.shelfSyncDone(books.length) : l.shelfSyncFailed),
-    ),);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(ok ? l.shelfSyncDone(books.length) : l.shelfSyncFailed),
+      ),
+    );
   }
 
   @override

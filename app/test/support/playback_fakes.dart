@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/playback/media_engine.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
 
@@ -102,7 +103,11 @@ class FakeDrive implements CloudDriveSource {
   int get current => byFsId['fs1'] ?? 0;
 
   @override
-  Future<ResolvedMedia> resolveMedia(String fsId) async {
+  Future<ResolvedMedia> resolveMedia(
+    String fsId, {
+    String? path,
+    MediaKind kind = MediaKind.audio,
+  }) async {
     resolves++;
     byFsId[fsId] = (byFsId[fsId] ?? 0) + 1;
     if (errors.isNotEmpty) {

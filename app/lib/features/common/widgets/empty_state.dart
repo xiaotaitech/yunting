@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 /// 离线页只有一行居中小字。同一个 App 里两种空态，看着像两个人做的。
 class EmptyState extends StatelessWidget {
   const EmptyState({
-    required this.icon, required this.title, super.key,
+    required this.icon,
+    required this.title,
+    super.key,
     this.description,
     this.action,
   });
@@ -28,9 +30,11 @@ class EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: theme.hintColor.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
             if (description != null) ...[
               const SizedBox(height: 8),
               Text(

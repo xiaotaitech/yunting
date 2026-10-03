@@ -27,6 +27,9 @@ class AddSeriesPage extends ConsumerStatefulWidget {
 class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   final _query = TextEditingController();
 
+  /// 有声书（含音频的文件夹）还是课程（含视频的文件夹）。
+  MediaKind _kind = MediaKind.audio;
+
   @override
   void dispose() {
     _query.dispose();
@@ -36,7 +39,7 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final folders = ref.watch(mediaFoldersProvider);
+    final folders = ref.watch(mediaFoldersProvider(_kind));
 
     return Scaffold(
       appBar: AppBar(
@@ -49,22 +52,46 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
+          preferredSize: const Size.fromHeight(116),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: SearchBar(
-              controller: _query,
-              hintText: l.addSearchHint,
-              leading: const Icon(Icons.search),
-              elevation: const WidgetStatePropertyAll(0),
-              onChanged: (_) => setState(() {}),
-              trailing: [
-                if (_query.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    tooltip: l.addSearchClear,
-                    onPressed: () => setState(_query.clear),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<MediaKind>(
+                    segments: [
+                      ButtonSegment(
+                        value: MediaKind.audio,
+                        icon: const Icon(Icons.headphones_outlined),
+                        label: Text(l.addKindAudiobook),
+                      ),
+                      ButtonSegment(
+                        value: MediaKind.video,
+                        icon: const Icon(Icons.ondemand_video_outlined),
+                        label: Text(l.addKindCourse),
+                      ),
+                    ],
+                    selected: {_kind},
+                    onSelectionChanged: (s) => setState(() => _kind = s.first),
                   ),
+                ),
+                const SizedBox(height: 8),
+                SearchBar(
+                  controller: _query,
+                  hintText: l.addSearchHint,
+                  leading: const Icon(Icons.search),
+                  elevation: const WidgetStatePropertyAll(0),
+                  onChanged: (_) => setState(() {}),
+                  trailing: [
+                    if (_query.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        tooltip: l.addSearchClear,
+                        onPressed: () => setState(_query.clear),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -73,19 +100,23 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
       body: folders.when(
         // 刷新时保留旧列表，不要整页闪成转圈
         skipLoadingOnRefresh: true,
-        loading: () => _Scanning(label: l.addScanning),
+        loading: () => _Scanning(
+          label:
+              _kind == MediaKind.video ? l.addScanningCourses : l.addScanning,
+        ),
         error: (e, _) => EmptyState(
           icon: Icons.cloud_off_outlined,
           title: l.addScanFailed,
           description: l.anyError(e),
           action: FilledButton(
-            onPressed: () => ref.invalidate(mediaFoldersProvider),
+            onPressed: () => ref.invalidate(mediaFoldersProvider(_kind)),
             child: Text(l.actionRetry),
           ),
         ),
         data: (all) => RefreshIndicator(
-          onRefresh: () => ref.refresh(mediaFoldersProvider.future),
+          onRefresh: () => ref.refresh(mediaFoldersProvider(_kind).future),
           child: _FolderList(
+            kind: _kind,
             all: all,
             visible: filterFolders(all, _query.text),
             query: _query.text,
@@ -116,11 +147,13 @@ class _Scanning extends StatelessWidget {
 
 class _FolderList extends ConsumerWidget {
   const _FolderList({
+    required this.kind,
     required this.all,
     required this.visible,
     required this.query,
   });
 
+  final MediaKind kind;
   final List<MediaFolder> all;
   final List<MediaFolder> visible;
   final String query;
@@ -139,7 +172,11 @@ class _FolderList extends ConsumerWidget {
           const SizedBox(height: 80),
           EmptyState(
             icon: Icons.search_off,
-            title: all.isEmpty ? l.addNoAudioAnywhere : l.addNoMatch(query),
+            title: all.isEmpty
+                ? (kind == MediaKind.video
+                    ? l.addNoVideoAnywhere
+                    : l.addNoAudioAnywhere)
+                : l.addNoMatch(query),
             description: all.isEmpty ? null : l.addNoMatchHint,
           ),
         ],
@@ -154,23 +191,34 @@ class _FolderList extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
               query.isEmpty
-                  ? l.addFolderCount(all.length)
+                  ? (kind == MediaKind.video
+                      ? l.addCourseFolderCount(all.length)
+                      : l.addFolderCount(all.length))
                   : l.addMatchCount(visible.length),
               style: Theme.of(context).textTheme.labelMedium,
             ),
           );
         }
         final f = visible[i - 1];
-        return _FolderTile(folder: f, onShelf: onShelf.contains(f.path));
+        return _FolderTile(
+          folder: f,
+          kind: kind,
+          onShelf: onShelf.contains(f.path),
+        );
       },
     );
   }
 }
 
 class _FolderTile extends ConsumerStatefulWidget {
-  const _FolderTile({required this.folder, required this.onShelf});
+  const _FolderTile({
+    required this.folder,
+    required this.kind,
+    required this.onShelf,
+  });
 
   final MediaFolder folder;
+  final MediaKind kind;
   final bool onShelf;
 
   @override
@@ -192,8 +240,7 @@ class _FolderTileState extends ConsumerState<_FolderTile> {
           .claim(widget.folder.path);
       messenger.showSnackBar(
         SnackBar(
-          content:
-              Text(l.browseAdded(s.title, s.episodeCount, l.unit(s.kind))),
+          content: Text(l.browseAdded(s.title, s.episodeCount, l.unit(s.kind))),
         ),
       );
     } on DriveException catch (e) {
@@ -209,10 +256,14 @@ class _FolderTileState extends ConsumerState<_FolderTile> {
     final theme = Theme.of(context);
     final f = widget.folder;
     return ListTile(
-      leading: const Icon(Icons.library_music_outlined),
+      leading: Icon(
+        widget.kind == MediaKind.video
+            ? Icons.video_library_outlined
+            : Icons.library_music_outlined,
+      ),
       title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${l.addAudioCount(f.mediaCount)} · ${formatBytes(f.totalBytes)}\n'
+        '${widget.kind == MediaKind.video ? l.addVideoCount(f.mediaCount) : l.addAudioCount(f.mediaCount)} · ${formatBytes(f.totalBytes)}\n'
         '${f.parentPath}',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,

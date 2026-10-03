@@ -646,5 +646,39 @@
         "type": "String"
       }
     }
-  }
+  },
+  "addKindAudiobook": "有声书",
+  "addKindCourse": "课程",
+  "addScanningCourses": "正在查找网盘里的课程视频…",
+  "addNoVideoAnywhere": "网盘里没有找到视频文件",
+  "addCourseFolderCount": "{count} 个文件夹含有视频，最近更新的在前",
+  "@addCourseFolderCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addVideoCount": "{count} 个视频",
+  "@addVideoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playerFullscreen": "全屏",
+  "playerExitFullscreen": "退出全屏",
+  "playerPreparingVideo": "正在准备视频（约 8 秒）",
+  "mineVideoQuality": "视频清晰度",
+  "mineVideoQualityValue": "{value}p",
+  "@mineVideoQualityValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "mineVideoQuality720": "更清楚，默认",
+  "mineVideoQuality480": "更省流量，网络慢时更流畅"
 }

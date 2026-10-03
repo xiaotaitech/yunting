@@ -11,6 +11,7 @@ import 'package:yun_audiobook/features/account/account_controller.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/help/help_page.dart';
+import 'package:yun_audiobook/features/player/playback_settings_controller.dart';
 import 'package:yun_audiobook/features/shelf/sync_controller.dart';
 import 'package:yun_audiobook/features/update/app_installer.dart';
 import 'package:yun_audiobook/features/update/update_dialog.dart';
@@ -40,6 +41,7 @@ class MinePage extends ConsumerWidget {
               const _SyncTile(),
               _Group(l.mineGroupPlayback),
               const _ResumeSwitch(),
+              const _VideoQualityTile(),
               _Group(l.mineGroupAbout),
               // iOS 不允许侧载安装，没有应用内更新
               if (AppInstaller.supported) _UpdateTile(version: v),
@@ -139,6 +141,52 @@ class _SyncTile extends ConsumerWidget {
                 ),
               );
             },
+    );
+  }
+}
+
+/// 视频清晰度：720p（默认）/ 480p。只影响之后打开的视频。
+class _VideoQualityTile extends ConsumerWidget {
+  const _VideoQualityTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final current = ref.watch(videoQualityProvider).value ??
+        SettingsDao.videoQualityDefault;
+    return ListTile(
+      leading: const Icon(Icons.hd_outlined),
+      title: Text(l.mineVideoQuality),
+      subtitle: Text(l.mineVideoQualityValue(current)),
+      onTap: () async {
+        final picked = await showDialog<String>(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: Text(l.mineVideoQuality),
+            children: [
+              for (final (value, hint) in [
+                ('720', l.mineVideoQuality720),
+                ('480', l.mineVideoQuality480),
+              ])
+                ListTile(
+                  leading: Icon(
+                    value == current
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                  ),
+                  title: Text(l.mineVideoQualityValue(value)),
+                  subtitle: Text(hint),
+                  onTap: () => Navigator.pop(ctx, value),
+                ),
+            ],
+          ),
+        );
+        if (picked != null) {
+          await ref
+              .read(playbackSettingsControllerProvider.notifier)
+              .setVideoQuality(picked);
+        }
+      },
     );
   }
 }

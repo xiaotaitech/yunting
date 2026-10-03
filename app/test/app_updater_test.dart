@@ -107,13 +107,16 @@ void main() {
   group('下载前测速', () {
     /// 每条线路按给定的「每 64KB 耗时」吐数据；status 非 200/206 视为失败。
     AppUpdater updaterWith(
-            Map<String, ({int status, Duration perChunk})> lines,) =>
+      Map<String, ({int status, Duration perChunk})> lines,
+    ) =>
         AppUpdater(
           repo: 'o/r',
           client: MockClient.streaming((req, _) async {
             final line = lines[req.url.host]!;
             expect(
-                req.headers['Range'], 'bytes=0-${AppUpdater.probeBytes - 1}',);
+              req.headers['Range'],
+              'bytes=0-${AppUpdater.probeBytes - 1}',
+            );
             Stream<List<int>> body() async* {
               for (var i = 0; i < 4; i++) {
                 await Future<void>.delayed(line.perChunk);

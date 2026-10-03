@@ -1,42 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/data/auth/token_store.dart';
 
-/// 内存版安全存储，替代平台通道。
-class MemoryStorage implements FlutterSecureStorage {
-  final Map<String, String> _map = {};
-
-  @override
-  Future<String?> read({required String key, dynamic iOptions, dynamic aOptions,
-      dynamic lOptions, dynamic webOptions, dynamic mOptions, dynamic wOptions,}) async =>
-      _map[key];
-
-  @override
-  Future<void> write({required String key, required String? value, dynamic iOptions,
-      dynamic aOptions, dynamic lOptions, dynamic webOptions, dynamic mOptions,
-      dynamic wOptions,}) async {
-    if (value == null) {
-      _map.remove(key);
-    } else {
-      _map[key] = value;
-    }
-  }
-
-  @override
-  Future<void> delete({required String key, dynamic iOptions, dynamic aOptions,
-      dynamic lOptions, dynamic webOptions, dynamic mOptions, dynamic wOptions,}) async {
-    _map.remove(key);
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
+import 'support/memory_storage.dart';
 
 /// 可控的假 OAuth 代理：数出被调用了几次刷新，并能模拟各种失败。
 class FakeProxy extends http.BaseClient {
@@ -77,21 +48,26 @@ class FakeProxy extends http.BaseClient {
 
   http.StreamedResponse _json(int status, Map<String, dynamic> body) {
     final bytes = utf8.encode(jsonEncode(body));
-    return http.StreamedResponse(Stream.value(bytes), status,
-        headers: {'content-type': 'application/json'},);
+    return http.StreamedResponse(
+      Stream.value(bytes),
+      status,
+      headers: {'content-type': 'application/json'},
+    );
   }
 }
 
 /// 注入假代理地址，使测试走的是真实的刷新逻辑而不是"未配置"分支。
 Future<AuthRepository> repoWithExpiredToken(FakeProxy proxy) async {
   final store = TokenStore(MemoryStorage());
-  await store.write(AuthToken(
-    accessToken: 'stale-token',
-    refreshToken: 'old-refresh',
-    // 已经过期，任何一次取 token 都会触发刷新
-    expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
-    scope: 'basic,netdisk',
-  ),);
+  await store.write(
+    AuthToken(
+      accessToken: 'stale-token',
+      refreshToken: 'old-refresh',
+      // 已经过期，任何一次取 token 都会触发刷新
+      expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+      scope: 'basic,netdisk',
+    ),
+  );
   return AuthRepository(
     store: store,
     client: proxy,
@@ -140,8 +116,13 @@ void main() {
 
       await expectLater(
         repo.accessToken(),
-        throwsA(isA<DriveException>().having(
-            (e) => e.kind, 'kind', DriveErrorKind.authInvalid,),),
+        throwsA(
+          isA<DriveException>().having(
+            (e) => e.kind,
+            'kind',
+            DriveErrorKind.authInvalid,
+          ),
+        ),
       );
       // 凭证已被清除，再取一次应当是"尚未授权"
       await expectLater(repo.accessToken(), throwsA(isA<DriveException>()));
@@ -166,8 +147,11 @@ void main() {
       for (final status in [403, 410]) {
         final e = DriveException.fromStatus(status);
         expect(e.kind, DriveErrorKind.linkExpired);
-        expect(e.isRetryable, isTrue,
-            reason: 'dlink 过期必须能被自动恢复流程重试',);
+        expect(
+          e.isRetryable,
+          isTrue,
+          reason: 'dlink 过期必须能被自动恢复流程重试',
+        );
       }
     });
 
@@ -188,8 +172,10 @@ void main() {
 
       await expectLater(
         repo.accessToken(),
-        throwsA(isA<DriveException>()
-            .having((e) => e.message, 'message', contains('unknown client id')),),
+        throwsA(
+          isA<DriveException>().having(
+              (e) => e.message, 'message', contains('unknown client id')),
+        ),
       );
     });
 
@@ -199,8 +185,10 @@ void main() {
 
       await expectLater(
         repo.accessToken(),
-        throwsA(isA<DriveException>()
-            .having((e) => e.message, 'message', contains('502')),),
+        throwsA(
+          isA<DriveException>()
+              .having((e) => e.message, 'message', contains('502')),
+        ),
       );
     });
   });

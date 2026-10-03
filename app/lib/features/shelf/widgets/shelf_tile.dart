@@ -53,16 +53,20 @@ class ShelfTile extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(series.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium,),
+                    Text(
+                      series.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium,
+                    ),
                     if (series.author != null)
-                      Text(series.author!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: theme.hintColor),),
+                      Text(
+                        series.author!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.hintColor),
+                      ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -77,9 +81,14 @@ class ShelfTile extends ConsumerWidget {
                                     ? l.shelfFinished(series.episodeCount, unit)
                                     : notStarted
                                         ? l.shelfNotStarted(
-                                            series.episodeCount, unit,)
-                                        : l.episodeOfTotal(episodeIndex + 1,
-                                            series.episodeCount, unit,),
+                                            series.episodeCount,
+                                            unit,
+                                          )
+                                        : l.episodeOfTotal(
+                                            episodeIndex + 1,
+                                            series.episodeCount,
+                                            unit,
+                                          ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall
@@ -89,13 +98,15 @@ class ShelfTile extends ConsumerWidget {
                         // 光有进度条读不出「听到哪了」，补一个百分比。
                         // 等宽数字，免得百分比变化时这一行左右抖。
                         if (series.episodeCount > 0 && !notStarted)
-                          Text('${(progress * 100).round()}%',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.hintColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),),
+                          Text(
+                            '${(progress * 100).round()}%',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.hintColor,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -115,12 +126,17 @@ class ShelfTile extends ConsumerWidget {
                         padding: const EdgeInsets.only(top: 6),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_rounded,
-                                size: 14, color: theme.colorScheme.error,),
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 14,
+                              color: theme.colorScheme.error,
+                            ),
                             const SizedBox(width: 4),
-                            Text(l.shelfSourceMissing,
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(color: theme.colorScheme.error),),
+                            Text(
+                              l.shelfSourceMissing,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: theme.colorScheme.error),
+                            ),
                           ],
                         ),
                       ),

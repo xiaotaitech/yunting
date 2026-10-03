@@ -4,8 +4,11 @@
 /// 不再有手动 invalidate。写：走 features 里的 controller。
 library;
 
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:video_player/video_player.dart';
 import 'package:yun_audiobook/app/app_services.dart';
 import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/core/natural_sort.dart';
@@ -57,6 +60,29 @@ PlaybackSession playbackSession(Ref ref) => ref.watch(servicesProvider).session;
 
 @Riverpod(keepAlive: true)
 AudioServiceBridge audioBridge(Ref ref) => ref.watch(servicesProvider).bridge;
+
+/// 当前的视频播放器实例（无视频时为 null）。播放页用它画画面。
+@Riverpod(keepAlive: true)
+Stream<VideoPlayerController?> videoController(Ref ref) async* {
+  final engine = ref.watch(servicesProvider).videoEngine;
+  final changes = StreamController<VideoPlayerController?>();
+  void push() => changes.add(engine.controller.value);
+  engine.controller.addListener(push);
+  ref.onDispose(() {
+    engine.controller.removeListener(push);
+    unawaited(changes.close());
+  });
+  yield engine.controller.value;
+  yield* changes.stream;
+}
+
+/// 视频清晰度（'720' / '480'）。
+@riverpod
+Stream<String> videoQuality(Ref ref) => ref
+    .watch(databaseProvider)
+    .settingsDao
+    .watch(SettingsDao.videoQualityKey)
+    .map((v) => v ?? SettingsDao.videoQualityDefault);
 
 @Riverpod(keepAlive: true)
 AppUpdater appUpdater(Ref ref) =>
@@ -120,13 +146,14 @@ Future<Series?> seriesAtFolder(Ref ref, String folderPath) {
   return ref.watch(databaseProvider).seriesDao.seriesByFolder(folderPath);
 }
 
-/// 网盘里所有装着音频的文件夹（「添加书籍」页）。
+/// 网盘里所有装着某类媒体的文件夹（「添加书籍」页的有声书 / 课程两栏）。
 ///
-/// keepAlive：一次扫描整盘要 1–2 秒，本次会话内反复进出添加页不必重扫；
+/// keepAlive：一次扫描整盘要 1–3 秒，本次会话内反复进出添加页不必重扫；
 /// 想看新传上去的文件就在页面上下拉刷新（`ref.refresh`）。
 @Riverpod(keepAlive: true)
-Future<List<MediaFolder>> mediaFolders(Ref ref) async => groupIntoFolders(
-      await ref.watch(servicesProvider).drive.listMediaFiles(MediaKind.audio),
+Future<List<MediaFolder>> mediaFolders(Ref ref, MediaKind kind) async =>
+    groupIntoFolders(
+      await ref.watch(servicesProvider).drive.listMediaFiles(kind),
     );
 
 @riverpod

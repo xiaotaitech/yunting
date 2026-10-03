@@ -34,6 +34,7 @@ dependencies:
   riverpod_annotation: ^4.0.7
   sqlite3: ^3.7.0
   url_launcher: ^6.3.2
+  video_player: ^2.14.1
 
 
 dev_dependencies:
@@ -54,3 +55,5 @@ flutter:
   # 使用帮助（app-help 规格）
   assets:
     - assets/help.md
+    # 演示模式的课程视频（ffmpeg 生成的 24 秒 HLS，约 430KB）
+    - assets/demo_video/
