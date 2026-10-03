@@ -30,7 +30,7 @@ class ShelfPage extends ConsumerWidget {
         actions: const [SyncButton()],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(Routes.browse('/')),
+        onPressed: () => context.push(Routes.addSeries),
         icon: const Icon(Icons.add),
         label: Text(l.shelfAdd),
       ),

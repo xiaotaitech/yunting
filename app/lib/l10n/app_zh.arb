@@ -597,5 +597,45 @@
         "type": "String"
       }
     }
-  }
+  },
+  "addBrowseByFolder": "按目录",
+  "addSearchHint": "搜索网盘里的文件夹",
+  "addSearchClear": "清除",
+  "addScanning": "正在查找网盘里的有声书…",
+  "addScanFailed": "没能读取网盘",
+  "addNoAudioAnywhere": "网盘里没有找到音频文件",
+  "addNoMatch": "没有找到「{query}」",
+  "@addNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "addNoMatchHint": "换个关键字试试，或者点右上角按目录查找",
+  "addFolderCount": "{count} 个文件夹含有音频，最近更新的在前",
+  "@addFolderCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addMatchCount": "找到 {count} 个文件夹",
+  "@addMatchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addAudioCount": "{count} 个音频",
+  "@addAudioCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addOnShelf": "已在书架"
 }

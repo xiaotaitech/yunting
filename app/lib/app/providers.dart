@@ -17,6 +17,7 @@ import 'package:yun_audiobook/data/repositories/library_repository.dart';
 import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/domain/continue_listening.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/media_folders.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/features/update/app_updater.dart';
 import 'package:yun_audiobook/playback/audio_service_bridge.dart';
@@ -118,6 +119,15 @@ Future<Series?> seriesAtFolder(Ref ref, String folderPath) {
   ref.watch(shelfProvider);
   return ref.watch(databaseProvider).seriesDao.seriesByFolder(folderPath);
 }
+
+/// 网盘里所有装着音频的文件夹（「添加书籍」页）。
+///
+/// keepAlive：一次扫描整盘要 1–2 秒，本次会话内反复进出添加页不必重扫；
+/// 想看新传上去的文件就在页面上下拉刷新（`ref.refresh`）。
+@Riverpod(keepAlive: true)
+Future<List<MediaFolder>> mediaFolders(Ref ref) async => groupIntoFolders(
+      await ref.watch(servicesProvider).drive.listMediaFiles(MediaKind.audio),
+    );
 
 @riverpod
 Stream<List<PlayHistoryEntry>> history(Ref ref) =>

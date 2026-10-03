@@ -9,6 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/core/logging.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
+import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/media_files.dart';
 
 /// 演示用的假网盘（design.md D9 的第二个 driver）。
 ///
@@ -109,6 +111,24 @@ class DemoDriveSource implements CloudDriveSource {
     final end = math.min(endInclusive + 1, bytes.length);
     if (start >= end) return const [];
     return bytes.sublist(start, end);
+  }
+
+  /// 演示网盘就在内存里：逐层走一遍目录树即可。
+  @override
+  Future<List<DriveEntry>> listMediaFiles(MediaKind kind) async {
+    final result = <DriveEntry>[];
+    Future<void> walk(String dir) async {
+      for (final e in await listDirectory(dir)) {
+        if (e.isDirectory) {
+          await walk(e.path);
+        } else if (mediaKindOf(e) == kind) {
+          result.add(e);
+        }
+      }
+    }
+
+    await walk('/');
+    return result;
   }
 
   /// 演示数据源解析出来的都是本地文件，下载管理器会直接标记为已缓存，

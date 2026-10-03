@@ -4,6 +4,7 @@ import 'package:yun_audiobook/core/natural_sort.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 void main() {
   late DemoDriveSource drive;
@@ -83,5 +84,13 @@ void main() {
       expect(drive, isA<CloudDriveSource>());
       expect(drive.id, 'demo');
     });
+  });
+
+  test('列出全盘音频：只有音频，覆盖所有层级', () async {
+    final files = await DemoDriveSource().listMediaFiles(MediaKind.audio);
+    expect(files, isNotEmpty);
+    expect(files.every((f) => !f.isDirectory), isTrue);
+    expect(files.every((f) => !f.name.endsWith('.jpg')), isTrue);
+    expect(files.any((f) => f.path.startsWith('/我的有声书/三体/')), isTrue);
   });
 }

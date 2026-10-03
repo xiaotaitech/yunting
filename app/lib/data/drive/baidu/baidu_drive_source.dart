@@ -7,6 +7,7 @@ import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/core/logging.dart';
 import 'package:yun_audiobook/data/drive/baidu/baidu_api_client.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
+import 'package:yun_audiobook/domain/entities.dart';
 
 /// 百度网盘的 [CloudDriveSource] 实现。
 ///
@@ -46,6 +47,30 @@ class BaiduDriveSource implements CloudDriveSource {
       start += pageSize;
     }
     return entries;
+  }
+
+  @override
+  Future<List<DriveEntry>> listMediaFiles(MediaKind kind) async {
+    final files = <DriveEntry>[];
+    var start = 0;
+    const pageSize = 1000;
+    while (true) {
+      final json = await _api.getJson('/xpan/multimedia', {
+        'method': 'categorylist',
+        // 百度的类别编号：1 视频，2 音频
+        'category': kind == MediaKind.video ? '1' : '2',
+        'parent_path': '/',
+        'recursion': '1',
+        'start': '$start',
+        'limit': '$pageSize',
+      });
+      final list = (json['list'] as List?) ?? const [];
+      files.addAll(list.map((e) => _toEntry(e as Map<String, dynamic>)));
+      final hasMore = (json['has_more'] as num?)?.toInt() == 1;
+      if (!hasMore || list.isEmpty) break;
+      start += pageSize;
+    }
+    return files;
   }
 
   @override

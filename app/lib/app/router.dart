@@ -12,6 +12,7 @@ import 'package:yun_audiobook/features/account/login_page.dart';
 import 'package:yun_audiobook/features/account/mine_page.dart';
 import 'package:yun_audiobook/features/help/help_page.dart';
 import 'package:yun_audiobook/features/history/history_page.dart';
+import 'package:yun_audiobook/features/library/add_series_page.dart';
 import 'package:yun_audiobook/features/library/browse_page.dart';
 import 'package:yun_audiobook/features/library/series_detail_page.dart';
 import 'package:yun_audiobook/features/offline/offline_page.dart';
@@ -79,6 +80,10 @@ GoRouter router(Ref ref) {
                     path: 'series/:id',
                     builder: (_, state) =>
                         SeriesDetailPage(seriesId: state.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: 'add',
+                    builder: (_, __) => const AddSeriesPage(),
                   ),
                   GoRoute(
                     path: 'browse',

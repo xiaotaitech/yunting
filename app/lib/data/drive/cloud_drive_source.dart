@@ -5,6 +5,8 @@
 /// MVP 刻意不实现第二个 driver，避免为假想需求过度设计。
 library;
 
+import 'package:yun_audiobook/domain/entities.dart';
+
 class DriveEntry {
   const DriveEntry({
     required this.fsId,
@@ -69,6 +71,13 @@ abstract class CloudDriveSource {
 
   /// 列出目录内容。只允许访问当前授权用户本人的文件。
   Future<List<DriveEntry>> listDirectory(String path);
+
+  /// 列出网盘里全部某类媒体文件（递归整盘）。「添加书籍」用它找出所有装着
+  /// 音频的文件夹，用户不必一层层点进目录。
+  ///
+  /// 不用百度的文件名搜索接口：实测它对中文文件名命中极不稳定（存在的
+  /// 「课程导学」「八段锦」都搜不到），而按类别列全盘 1600+ 个文件只要 1.4 秒。
+  Future<List<DriveEntry>> listMediaFiles(MediaKind kind);
 
   /// 取文件元信息（含可播放地址）。返回的地址有时效，禁止持久化。
   Future<ResolvedMedia> resolveMedia(String fsId);

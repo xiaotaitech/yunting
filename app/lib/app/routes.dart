@@ -7,6 +7,8 @@ abstract final class Routes {
   static const player = '/player';
   static const offline = '/mine/offline';
 
+  static const addSeries = '/shelf/add';
+
   static String series(String id) => '/shelf/series/$id';
 
   static String browse(String path) =>
