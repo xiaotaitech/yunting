@@ -101,32 +101,39 @@ class AppUpdater {
     );
   }
 
-  /// 依次尝试各镜像的 latest.json，第一个成功的为准。
+  /// 并发读各镜像的 latest.json，取版本最高的那一份。
+  ///
+  /// 不能「第一个成功的为准」：jsDelivr 的 cdn / fastly 两个入口缓存各自刷新，
+  /// 发版后某个入口可能好几分钟甚至更久还在给上一版（实测 0.5.0 发布后 fastly
+  /// 5 分钟仍是 0.4.2）。哪个先回就用哪个的话，用户会被告知「已是最新版本」。
   Future<AppRelease> _mirror() async {
-    Object last = const UpdateException('没有可用的镜像');
-    for (final url in mirrors) {
-      try {
-        final res = await _client.get(
-          Uri.parse(url),
-          headers: {'User-Agent': 'Yunting'},
-        ).timeout(_timeout);
-        if (res.statusCode != 200) {
-          last = UpdateException('HTTP ${res.statusCode}');
-          continue;
-        }
-        final j =
-            jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-        return AppRelease(
-          version: _stripV(j['version'] as String),
-          notes: cleanNotes(j['notes'] as String? ?? ''),
-          apkUrls: (j['apk'] as List? ?? const []).cast<String>(),
-          pageUrl: j['page'] as String? ?? latestPage,
-        );
-      } on Object catch (e) {
-        last = e;
-      }
+    final results =
+        await Future.wait(mirrors.map((u) => _capture(_readMirror(u))));
+    final ok = [
+      for (final r in results)
+        if (r.value != null) r.value!,
+    ];
+    if (ok.isEmpty) {
+      final err = results.map((r) => r.error).whereType<Object>().lastOrNull ??
+          const UpdateException('没有可用的镜像');
+      Error.throwWithStackTrace(err, StackTrace.current);
     }
-    Error.throwWithStackTrace(last, StackTrace.current);
+    return ok.reduce((a, b) => isNewer(b.version, a.version) ? b : a);
+  }
+
+  Future<AppRelease> _readMirror(String url) async {
+    final res = await _client.get(Uri.parse(url),
+        headers: {'User-Agent': 'Yunting'}).timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw UpdateException('HTTP ${res.statusCode}');
+    }
+    final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    return AppRelease(
+      version: _stripV(j['version'] as String),
+      notes: cleanNotes(j['notes'] as String? ?? ''),
+      apkUrls: (j['apk'] as List? ?? const []).cast<String>(),
+      pageUrl: j['page'] as String? ?? latestPage,
+    );
   }
 
   /// 每条线路测速时读取的字节数与时限。

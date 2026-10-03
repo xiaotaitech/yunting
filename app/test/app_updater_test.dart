@@ -191,4 +191,30 @@ void main() {
       expect(watch.elapsed, lessThan(const Duration(seconds: 8)));
     });
   });
+
+  test('镜像缓存不同步时取版本最高的那份，而不是先回来的', () async {
+    final u = AppUpdater(
+      repo: 'o/r',
+      api: 'https://api.invalid',
+      mirrors: ['https://stale/latest.json', 'https://fresh/latest.json'],
+      client: MockClient((req) async {
+        if (req.url.host == 'api.invalid') return http.Response('', 503);
+        final v = req.url.host == 'stale' ? '0.4.2' : '0.5.0';
+        // 旧的那份先回来
+        if (req.url.host == 'fresh') {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+        return http.Response(
+          jsonEncode({
+            'version': v,
+            'apk': ['https://x/$v.apk']
+          }),
+          200,
+        );
+      }),
+    );
+    final r = await u.latest();
+    expect(r.version, '0.5.0');
+    expect(r.apkUrls, ['https://x/0.5.0.apk']);
+  });
 }
