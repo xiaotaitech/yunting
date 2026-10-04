@@ -1,0 +1,10 @@
+{
+  "version": "0.6.2",
+  "notes": "## 云听书 0.6.2\n\n- 书架管理：长按任意一本书（或点右上角「管理」）可多选，一次移出多本\n- 移出后可以撤销，进度原样恢复\n- 只是移出书架，网盘和手机里的原文件不会被删除\n\n下载 yunting.apk 安装；已安装的用户可在「我的 → 检查更新」直接更新。\n",
+  "page": "https://github.com/xiaotaitech/yunting/releases/tag/v0.6.2",
+  "apk": [
+    "https://cdn.jsdelivr.net/gh/xiaotaitech/yunting@234657f4bdd21f20cebd6cf242693c7061aa14e8/yunting.apk",
+    "https://fastly.jsdelivr.net/gh/xiaotaitech/yunting@234657f4bdd21f20cebd6cf242693c7061aa14e8/yunting.apk",
+    "https://github.com/xiaotaitech/yunting/releases/download/v0.6.2/yunting.apk"
+  ]
+}
