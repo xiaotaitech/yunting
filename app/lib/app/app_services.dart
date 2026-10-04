@@ -97,16 +97,25 @@ class AppServices {
       drive: drive,
       extractLocal: local.extractCover,
     );
-    // 已在书架上、还没封面的书：启动稳定后在后台补一遍（新加的书在认领时补）
-    unawaited(
-      Future<void>.delayed(const Duration(seconds: 5), () async {
-        await covers.backfill(await database.seriesDao.shelf());
-      }),
-    );
     final downloads = DownloadManager(
       drive: drive,
       resolver: resolver,
       dao: database.seriesDao,
+    );
+
+    // 已在书架上、还没封面的书：启动稳定后在后台补一遍（新加的书在认领时补）
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 5), () async {
+        final shelf = await database.seriesDao.shelf();
+        // 移出书架后在撤销窗口内被杀掉的话，那几本的离线缓存没来得及清：
+        // 不在书架上却还占着空间的，这里补清一遍
+        final onShelf = {for (final s in shelf) s.id};
+        final usage = await database.seriesDao.cacheUsage();
+        for (final id in usage.keys.where((id) => !onShelf.contains(id))) {
+          await downloads.clearSeriesCache(id);
+        }
+        await covers.backfill(shelf);
+      }),
     );
 
     final videoEngine = _videoEngine ??= VideoEngine();

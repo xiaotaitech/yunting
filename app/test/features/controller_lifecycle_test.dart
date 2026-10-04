@@ -11,8 +11,10 @@ import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
 import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
 import 'package:yun_audiobook/features/player/playback_controller.dart';
+import 'package:yun_audiobook/playback/audio_service_bridge.dart';
 import 'package:yun_audiobook/playback/playback_session.dart';
 import 'package:yun_audiobook/playback/playback_url_resolver.dart';
 
@@ -24,11 +26,23 @@ import '../support/playback_fakes.dart';
 /// `claim` 在第一个 await 之后 provider 已被回收，紧接着的
 /// `ref.read(librarySyncProvider)` 抛「Cannot use the Ref after it has been
 /// disposed」——书其实已经加进库了，界面却既不回书架也不提示。
+/// 只记录「清了哪本的缓存」的下载管理器。
+class RecordingDownloads implements DownloadManager {
+  final cleared = <String>[];
+
+  @override
+  Future<void> clearSeriesCache(String seriesId) async => cleared.add(seriesId);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late AppDatabase db;
   late LibrarySync sync;
   late ProviderContainer container;
   late PlaybackSession session;
+  late RecordingDownloads downloads;
 
   setUp(() {
     db = AppDatabase(
@@ -39,6 +53,7 @@ void main() {
     );
     final drive = DemoDriveSource();
     sync = LibrarySync(drive: drive, db: db);
+    downloads = RecordingDownloads();
     session = PlaybackSession(
       engine: FakeEngine(),
       resolver: PlaybackUrlResolver(FakeDrive()),
@@ -47,6 +62,8 @@ void main() {
     container = ProviderContainer(
       overrides: [
         playbackSessionProvider.overrideWithValue(session),
+        audioBridgeProvider.overrideWithValue(AudioServiceBridge(session)),
+        downloadManagerProvider.overrideWithValue(downloads),
         coverServiceProvider.overrideWithValue(
           CoverService(
             dao: db.seriesDao,
@@ -106,5 +123,67 @@ void main() {
     final episodes = await db.seriesDao.episodesOf(series.id);
     expect(episodes, hasLength(3));
     expect(episodes.every((e) => e.mediaKind == MediaKind.video), isTrue);
+  });
+
+  group('书架管理：批量移出', () {
+    late LibraryController library;
+    late List<Series> books;
+
+    setUp(() async {
+      library = container.read(libraryControllerProvider.notifier);
+      books = [
+        await library.claim('/我的有声书/三体'),
+        await library.claim('/我的有声书/小王子'),
+      ];
+    });
+
+    test('一次移出多本：都离开书架，原文件与记录行都还在（软删除）', () async {
+      await library.removeMany(books);
+      expect(await db.seriesDao.shelf(), isEmpty);
+      expect(await db.seriesDao.seriesById(books.first.id), isNotNull);
+    });
+
+    test('缓存等撤销窗口过了才清；撤销了的那本不清', () async {
+      await library.removeMany(books);
+      expect(downloads.cleared, isEmpty, reason: '刚移出时缓存还要留着给撤销');
+      await library.undoRemove([books.first]);
+      await library.flushPendingCacheClear();
+      expect(downloads.cleared, [books.last.id]);
+    });
+
+    test('撤销：回到书架，进度原样，时间戳更新（同步时压过「删除」）', () async {
+      await db.seriesDao.updateProgress(
+        seriesId: books.first.id,
+        episodeIndex: 2,
+        positionMs: 9000,
+        deviceId: 'dev',
+      );
+      final before = (await db.seriesDao.seriesById(books.first.id))!;
+      await library.removeMany([before]);
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await library.undoRemove([before]);
+      final after = (await db.seriesDao.seriesById(books.first.id))!;
+      expect((await db.seriesDao.shelf()).map((s) => s.id), contains(after.id));
+      expect(after.currentEpisodeIndex, 2);
+      expect(after.currentPositionMs, 9000);
+      expect(after.updatedAt.isAfter(before.updatedAt), isTrue);
+    });
+
+    test('正在播的那本被移出：结束播放会话', () async {
+      await container
+          .read(playbackControllerProvider.notifier)
+          .resume(books.first);
+      expect(session.current.hasMedia, isTrue);
+      await library.removeMany([books.first]);
+      expect(session.current.hasMedia, isFalse);
+    });
+
+    test('移出别的书不影响正在播的', () async {
+      await container
+          .read(playbackControllerProvider.notifier)
+          .resume(books.first);
+      await library.removeMany([books.last]);
+      expect(session.current.series?.id, books.first.id);
+    });
   });
 }

@@ -10,9 +10,24 @@ import 'package:yun_audiobook/features/shelf/widgets/resume_action.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
 class ShelfTile extends ConsumerWidget {
-  const ShelfTile({required this.series, super.key});
+  const ShelfTile({
+    required this.series,
+    super.key,
+    this.selecting = false,
+    this.selected = false,
+    this.onToggle,
+    this.onLongPress,
+  });
 
   final Series series;
+
+  /// 书架管理模式：左侧显示勾选框，点整行切换选中，不进详情、不显示播放键。
+  final bool selecting;
+  final bool selected;
+  final VoidCallback? onToggle;
+
+  /// 长按进入管理模式并选中这一本。
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,12 +51,19 @@ class ShelfTile extends ConsumerWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      color: selected ? theme.colorScheme.secondaryContainer : null,
       child: InkWell(
-        onTap: () => context.push(Routes.series(series.id)),
+        onTap:
+            selecting ? onToggle : () => context.push(Routes.series(series.id)),
+        onLongPress: selecting ? null : onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
+              if (selecting) ...[
+                Checkbox(value: selected, onChanged: (_) => onToggle?.call()),
+                const SizedBox(width: 4),
+              ],
               SeriesCover(
                 title: series.title,
                 coverFsId: series.coverFsId,
@@ -144,13 +166,14 @@ class ShelfTile extends ConsumerWidget {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: l.shelfContinue,
-                icon: const Icon(Icons.play_circle_fill, size: 36),
-                onPressed: series.sourceMissing
-                    ? null
-                    : () => resumeSeries(context, ref, series),
-              ),
+              if (!selecting)
+                IconButton(
+                  tooltip: l.shelfContinue,
+                  icon: const Icon(Icons.play_circle_fill, size: 36),
+                  onPressed: series.sourceMissing
+                      ? null
+                      : () => resumeSeries(context, ref, series),
+                ),
             ],
           ),
         ),

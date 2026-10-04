@@ -689,5 +689,44 @@
   "addGrant": "授权",
   "addSearchHintDevice": "搜索本机的文件夹",
   "detailMenuCover": "更换封面",
-  "detailCoverChanged": "封面已更换"
+  "detailCoverChanged": "封面已更换",
+  "shelfManage": "管理书架",
+  "shelfManageDone": "完成",
+  "shelfSelectedCount": "已选 {count} 本",
+  "@shelfSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfSelectAll": "全选",
+  "shelfSelectNone": "全不选",
+  "shelfRemoveAction": "移出书架（{count}）",
+  "@shelfRemoveAction": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfRemoveTitle": "移出 {count} 本书？",
+  "@shelfRemoveTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfRemoveBody": "网盘和手机里的原文件不会被删除，以后可以再加回来。这些书的离线缓存会一并清理。",
+  "shelfRemoveConfirm": "移出",
+  "shelfRemoved": "已移出 {count} 本",
+  "@shelfRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfUndo": "撤销"
 }

@@ -332,6 +332,17 @@ class LibraryRepository {
     );
   }
 
+  /// 撤销移出：把软删除的那一行恢复。时间戳记成现在，同步时它比「删除」新，
+  /// 别的设备也会跟着恢复（记录粒度 LWW）。
+  Future<void> restore(Series series) async {
+    await _dao.upsertSeries(
+      series.copyWith(
+        updatedAt: DateTime.now(),
+        updatedByDevice: await _deviceId(),
+      ),
+    );
+  }
+
   /// 移出书架。只删本地记录与缓存，绝不动网盘原文件（规格「移除书籍」）。
   Future<void> remove(String seriesId) async {
     await _dao.markDeleted(seriesId, await _deviceId());

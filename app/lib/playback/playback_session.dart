@@ -419,6 +419,16 @@ class PlaybackSession {
     await _engine.stop();
   }
 
+  /// 结束整个会话：停下播放器并清空状态（迷你播放条随之消失）。
+  /// 正在播的书被移出书架时用——不能只暂停，界面上还会挂着一本已经不在书架上的书。
+  Future<void> reset() async {
+    _startGen++;
+    _stopWatchdog();
+    _sleepTimer.cancel();
+    await _engine.stop();
+    _set(PlaybackSnapshot.empty);
+  }
+
   Future<void> seek(Duration position) => _engine.seek(position);
 
   /// 规格要求 0.5x–3.0x。

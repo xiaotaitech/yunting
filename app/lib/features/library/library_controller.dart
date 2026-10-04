@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/domain/entities.dart';
@@ -15,7 +16,15 @@ part 'library_controller.g.dart';
 @Riverpod(keepAlive: true)
 class LibraryController extends _$LibraryController {
   @override
-  void build() {}
+  void build() {
+    ref.onDispose(() => _cacheTimer?.cancel());
+  }
+
+  /// 批量移出后多久才清离线缓存：要比「撤销」提示停留得久。
+  /// 缓存一删就回不来了，所以等撤销窗口过了再动手。
+  static const undoWindow = Duration(seconds: 6);
+  Timer? _cacheTimer;
+  final Set<String> _pendingCacheClear = {};
 
   // 一次性查询。不要用 `ref.read(xxxProvider.future)` 代替：那些是自动释放的
   // 流 provider，没有监听者时会在发出第一个值之前就被回收，直接抛
@@ -76,6 +85,49 @@ class LibraryController extends _$LibraryController {
 
   /// 课程视频走转码流，没有可离线的文件（add-video-courses「课程不提供离线」），只下音频；
   /// 本机文件本来就在手机上，也跳过。
+  /// 书架管理：一次移出多本（library-catalog「书架管理」）。
+  ///
+  /// 网盘、手机里的原文件一个字节不动；离线缓存在撤销窗口过后再清。
+  /// 正在播的那本若在其中，结束播放会话。
+  Future<void> removeMany(List<Series> list) async {
+    final ids = {for (final s in list) s.id};
+    final session = ref.read(playbackSessionProvider);
+    if (ids.contains(session.current.series?.id)) {
+      // 经桥停下：连系统媒体通知一起收掉
+      await ref.read(audioBridgeProvider).stop();
+      await session.reset();
+    }
+    final repo = ref.read(libraryRepositoryProvider);
+    for (final s in list) {
+      await repo.remove(s.id);
+    }
+    ref.read(librarySyncProvider).markDirty();
+    _pendingCacheClear.addAll(ids);
+    _cacheTimer?.cancel();
+    _cacheTimer = Timer(undoWindow, flushPendingCacheClear);
+  }
+
+  /// 撤销刚才的批量移出：恢复书架条目与进度；还没清的缓存也就保住了。
+  Future<void> undoRemove(List<Series> list) async {
+    _pendingCacheClear.removeAll(list.map((s) => s.id));
+    final repo = ref.read(libraryRepositoryProvider);
+    for (final s in list) {
+      await repo.restore(s);
+    }
+    ref.read(librarySyncProvider).markDirty();
+  }
+
+  /// 撤销窗口到期时清缓存。测试里直接调用，不必真等 6 秒。
+  @visibleForTesting
+  Future<void> flushPendingCacheClear() async {
+    final ids = _pendingCacheClear.toList();
+    _pendingCacheClear.clear();
+    final downloads = ref.read(downloadManagerProvider);
+    for (final id in ids) {
+      await downloads.clearSeriesCache(id);
+    }
+  }
+
   Future<void> downloadAll(Series series) async {
     final episodes = await episodesOf(series.id);
     await ref.read(downloadManagerProvider).enqueueAll(
