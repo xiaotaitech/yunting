@@ -156,6 +156,18 @@ Future<List<MediaFolder>> mediaFolders(Ref ref, MediaKind kind) async =>
       await ref.watch(servicesProvider).drive.listMediaFiles(kind),
     );
 
+/// 本机里装着某类媒体的文件夹（「添加书籍」本机栏）。读 MediaStore 很快，刷新即重查。
+@Riverpod(keepAlive: true)
+Future<List<MediaFolder>> localMediaFolders(Ref ref, MediaKind kind) async =>
+    groupIntoFolders(
+      await ref.watch(servicesProvider).localMedia.listMediaFiles(kind),
+    );
+
+/// 是否已授权读取本机该类媒体。授权后 invalidate 它与 [localMediaFoldersProvider]。
+@riverpod
+Future<bool> localMediaPermission(Ref ref, MediaKind kind) =>
+    ref.watch(servicesProvider).localMedia.hasPermission(kind);
+
 @riverpod
 Stream<List<PlayHistoryEntry>> history(Ref ref) =>
     ref.watch(databaseProvider).historyDao.watchRecent();

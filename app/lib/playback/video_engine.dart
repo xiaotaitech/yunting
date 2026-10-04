@@ -74,14 +74,23 @@ class VideoEngine implements MediaEngine {
     previous?.removeListener(_onValue);
     unawaited(previous?.dispose());
 
-    final next = VideoPlayerController.networkUrl(
-      Uri.parse(media.url),
-      // 播放列表是本地 file:// 的 .m3u8，没有扩展名推断时也要明确告诉它是 HLS
-      formatHint: media.kind == StreamKind.hls ? VideoFormat.hls : null,
-      httpHeaders: media.headers,
-      // 退到后台声音继续：课程常被当音频听（add-video-courses「后台听课」）
-      videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
-    );
+    final uri = Uri.parse(media.url);
+    // 本机视频是 content:// 地址，要走 contentUri（networkUrl 只认 http 与 file）
+    final next = uri.scheme == 'content'
+        ? VideoPlayerController.contentUri(
+            uri,
+            videoPlayerOptions:
+                VideoPlayerOptions(allowBackgroundPlayback: true),
+          )
+        : VideoPlayerController.networkUrl(
+            uri,
+            // 播放列表是本地 file:// 的 .m3u8，没有扩展名推断时也要明确告诉它是 HLS
+            formatHint: media.kind == StreamKind.hls ? VideoFormat.hls : null,
+            httpHeaders: media.headers,
+            // 退到后台声音继续：课程常被当音频听（add-video-courses「后台听课」）
+            videoPlayerOptions:
+                VideoPlayerOptions(allowBackgroundPlayback: true),
+          );
     try {
       await next.initialize();
       if (initialPosition > Duration.zero) await next.seekTo(initialPosition);

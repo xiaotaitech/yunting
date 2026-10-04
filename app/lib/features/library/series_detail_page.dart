@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
 import 'package:yun_audiobook/features/library/widgets/episode_list.dart';
@@ -66,8 +67,8 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
             itemBuilder: (_) => [
               PopupMenuItem(value: 'edit', child: Text(l.detailMenuEdit)),
               PopupMenuItem(value: 'refresh', child: Text(l.detailMenuRefresh)),
-              // 纯视频的课程没有可离线的内容，下载与清缓存都不出现
-              if (series.kind != SeriesKind.course) ...[
+              // 纯视频的课程、本机书都没有要离线的内容，下载与清缓存都不出现
+              if (series.kind != SeriesKind.course && !series.isLocal) ...[
                 PopupMenuItem(
                   value: 'download',
                   child: Text(l.detailMenuDownload),

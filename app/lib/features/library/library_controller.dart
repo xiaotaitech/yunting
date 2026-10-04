@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 
 part 'library_controller.g.dart';
 
@@ -61,16 +62,20 @@ class LibraryController extends _$LibraryController {
     ref.read(librarySyncProvider).markDirty();
   }
 
-  /// 课程视频走转码流，没有可离线的文件（add-video-courses「课程不提供离线」），只下音频。
+  /// 课程视频走转码流，没有可离线的文件（add-video-courses「课程不提供离线」），只下音频；
+  /// 本机文件本来就在手机上，也跳过。
   Future<void> downloadAll(Series series) async {
     final episodes = await episodesOf(series.id);
     await ref.read(downloadManagerProvider).enqueueAll(
-          episodes.where((e) => e.mediaKind == MediaKind.audio).toList(),
+          episodes
+              .where((e) => e.mediaKind == MediaKind.audio && !e.isLocal)
+              .toList(),
         );
   }
 
   Future<void> download(Episode episode) async {
-    if (episode.mediaKind == MediaKind.video) return;
+    // 视频无可离线文件；本机文件本来就在手机上
+    if (episode.mediaKind == MediaKind.video || episode.isLocal) return;
     await ref.read(downloadManagerProvider).enqueue(episode);
   }
 

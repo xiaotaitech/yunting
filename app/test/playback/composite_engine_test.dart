@@ -16,6 +16,7 @@ ResolvedMedia media(MediaKind kind) => ResolvedMedia(
 void main() {
   late FakeEngine audio;
   late FakeEngine video;
+  late FakeEngine localAudio;
   late CompositeEngine engine;
   late List<EngineSnapshot> seen;
   late int completions;
@@ -23,7 +24,9 @@ void main() {
   setUp(() {
     audio = FakeEngine();
     video = FakeEngine();
-    engine = CompositeEngine(audio: audio, video: video);
+    localAudio = FakeEngine();
+    engine =
+        CompositeEngine(audio: audio, video: video, localAudio: localAudio);
     seen = [];
     completions = 0;
     engine.snapshots.listen(seen.add);
@@ -69,5 +72,17 @@ void main() {
     await engine.play();
     expect(video.playCalls, 1);
     expect(audio.playCalls, 0);
+  });
+
+  test('本机 content:// 音频走不设 UA 的内核（避开 just_audio 的回环代理）', () async {
+    await engine.load(
+      ResolvedMedia(
+        url: 'content://media/external/audio/media/11',
+        isLocal: true,
+        expiresAt: DateTime(9999),
+      ),
+    );
+    expect(localAudio.loads, hasLength(1));
+    expect(audio.loads, isEmpty);
   });
 }

@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -32,6 +33,36 @@ class MainActivity : AudioServiceActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+        // 本机媒体：查询放后台线程，几千个文件时不卡界面
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "yun/media").setMethodCallHandler { call, result ->
+            val kind = call.argument<String>("kind") ?: "audio"
+            when (call.method) {
+                "hasPermission" -> result.success(LocalMedia.hasPermission(this, kind))
+                "requestPermission" -> LocalMedia.requestPermission(this, kind, result)
+                "query" -> Thread {
+                    try {
+                        val rows = LocalMedia.query(this, kind)
+                        runOnUiThread { result.success(rows) }
+                    } catch (e: SecurityException) {
+                        runOnUiThread { result.error("permission", e.message, null) }
+                    } catch (e: Exception) {
+                        runOnUiThread { result.error("query", e.message, null) }
+                    }
+                }.start()
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LocalMedia.REQUEST_CODE) {
+            LocalMedia.onPermissionResult(grantResults)
         }
     }
 

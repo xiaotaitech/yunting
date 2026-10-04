@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
@@ -87,10 +88,10 @@ class _EpisodeListState extends ConsumerState<EpisodeList> {
   Widget _trailing(BuildContext context, Episode e) {
     final l = context.l10n;
     final controller = ref.read(libraryControllerProvider.notifier);
-    // 视频走转码流，没有可离线的文件，不给下载入口（add-video-courses）
-    if (e.mediaKind == MediaKind.video) {
+    // 视频走转码流，没有可离线的文件；本机文件本来就在手机上——都不给下载入口
+    if (e.mediaKind == MediaKind.video || e.isLocal) {
       return Icon(
-        Icons.ondemand_video_outlined,
+        e.isLocal ? Icons.smartphone_outlined : Icons.ondemand_video_outlined,
         size: 20,
         color: Theme.of(context).hintColor,
       );

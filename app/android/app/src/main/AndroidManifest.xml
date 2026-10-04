@@ -13,6 +13,11 @@
 
     <!-- 应用内更新：下载完成后打开系统安装界面（app-distribution 规格） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- 本机音频 / 视频（add-local-media）：只读系统媒体索引。13 起分开申请，之前是读存储 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
 
     <application
         android:label="云听书"

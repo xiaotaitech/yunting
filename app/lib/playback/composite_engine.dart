@@ -10,9 +10,13 @@ import 'package:yun_audiobook/playback/media_engine.dart';
 /// 先停下另一个。PlaybackSession 因此完全不感知视频——进度、恢复、看门狗、
 /// 睡眠定时对两种媒体是同一套逻辑。
 class CompositeEngine implements MediaEngine {
-  CompositeEngine({required this.audio, required this.video})
-      : _active = audio {
-    for (final e in [audio, video]) {
+  CompositeEngine({
+    required this.audio,
+    required this.video,
+    MediaEngine? localAudio,
+  })  : localAudio = localAudio ?? audio,
+        _active = audio {
+    for (final e in {audio, video, this.localAudio}) {
       _subs.addAll([
         e.snapshots.listen((s) {
           if (identical(e, _active)) _snapshots.add(s);
@@ -29,6 +33,9 @@ class CompositeEngine implements MediaEngine {
 
   final MediaEngine audio;
   final MediaEngine video;
+
+  /// 本机 content:// 音频用的内核（不设 UA、不走 just_audio 的回环代理）。
+  final MediaEngine localAudio;
   MediaEngine _active;
 
   final _subs = <StreamSubscription<Object?>>[];
@@ -55,7 +62,11 @@ class CompositeEngine implements MediaEngine {
     ResolvedMedia media, {
     Duration initialPosition = Duration.zero,
   }) async {
-    final target = media.mediaKind == MediaKind.video ? video : audio;
+    final target = media.mediaKind == MediaKind.video
+        ? video
+        : media.url.startsWith('content:')
+            ? localAudio
+            : audio;
     if (!identical(target, _active)) {
       final previous = _active;
       // 先切换再停旧的：旧内核停下时报的 playing=false 不该再转发出去
@@ -79,9 +90,10 @@ class CompositeEngine implements MediaEngine {
 
   @override
   Future<void> setSpeed(double speed) async {
-    // 两个都设：切到另一种媒体时倍速保持一致
-    await audio.setSpeed(speed);
-    await video.setSpeed(speed);
+    // 全都设：切到另一种媒体时倍速保持一致
+    for (final e in {audio, video, localAudio}) {
+      await e.setSpeed(speed);
+    }
   }
 
   @override
@@ -89,8 +101,9 @@ class CompositeEngine implements MediaEngine {
     for (final s in _subs) {
       await s.cancel();
     }
-    await audio.dispose();
-    await video.dispose();
+    for (final e in {audio, video, localAudio}) {
+      await e.dispose();
+    }
     await _snapshots.close();
     await _completed.close();
     await _errors.close();

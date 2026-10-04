@@ -9,6 +9,7 @@ import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/sync/library_snapshot.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 
 /// 状态同步（listening-progress 规格）。
 ///
@@ -125,8 +126,11 @@ class LibrarySync {
   }
 
   Future<LibrarySnapshot> _localSnapshot() async {
-    // 含软删除的行：删除也是要同步出去的变更
-    final rows = await _db.select(_db.books).get();
+    // 含软删除的行：删除也是要同步出去的变更。
+    // 本机书不进同步：文件只在这台手机上，别的设备拿到记录也播不了（add-local-media）。
+    final rows = (await _db.select(_db.books).get())
+        .where((r) => !isLocalPath(r.folderPath))
+        .toList();
     return LibrarySnapshot(books: rows.map(_rowToRecord).toList());
   }
 

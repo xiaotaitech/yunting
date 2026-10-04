@@ -5,6 +5,7 @@ import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/domain/media_folders.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
@@ -30,6 +31,16 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   /// 有声书（含音频的文件夹）还是课程（含视频的文件夹）。
   MediaKind _kind = MediaKind.audio;
 
+  /// 从网盘加，还是从这台手机里加（add-local-media）。
+  bool _device = false;
+
+  Future<void> _grant() async {
+    await ref.read(servicesProvider).localMedia.requestPermission(_kind);
+    ref
+      ..invalidate(localMediaPermissionProvider(_kind))
+      ..invalidate(localMediaFoldersProvider(_kind));
+  }
+
   @override
   void dispose() {
     _query.dispose();
@@ -39,24 +50,51 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final folders = ref.watch(mediaFoldersProvider(_kind));
+    final folders = _device
+        ? ref.watch(localMediaFoldersProvider(_kind))
+        : ref.watch(mediaFoldersProvider(_kind));
+    final granted = !_device ||
+        (ref.watch(localMediaPermissionProvider(_kind)).value ?? true);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l.shelfAdd),
         actions: [
-          TextButton.icon(
-            onPressed: () => context.push(Routes.browse('/')),
-            icon: const Icon(Icons.folder_open_outlined),
-            label: Text(l.addBrowseByFolder),
-          ),
+          // 按目录逐层浏览只对网盘有意义
+          if (!_device)
+            TextButton.icon(
+              onPressed: () => context.push(Routes.browse('/')),
+              icon: const Icon(Icons.folder_open_outlined),
+              label: Text(l.addBrowseByFolder),
+            ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(116),
+          preferredSize: const Size.fromHeight(168),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Column(
               children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<bool>(
+                    segments: [
+                      ButtonSegment(
+                        value: false,
+                        icon: const Icon(Icons.cloud_outlined),
+                        label: Text(l.addOriginNetdisk),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        icon: const Icon(Icons.smartphone_outlined),
+                        label: Text(l.addOriginDevice),
+                      ),
+                    ],
+                    selected: {_device},
+                    onSelectionChanged: (s) =>
+                        setState(() => _device = s.first),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<MediaKind>(
@@ -79,7 +117,7 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
                 const SizedBox(height: 8),
                 SearchBar(
                   controller: _query,
-                  hintText: l.addSearchHint,
+                  hintText: _device ? l.addSearchHintDevice : l.addSearchHint,
                   leading: const Icon(Icons.search),
                   elevation: const WidgetStatePropertyAll(0),
                   onChanged: (_) => setState(() {}),
@@ -97,32 +135,48 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
           ),
         ),
       ),
-      body: folders.when(
-        // 刷新时保留旧列表，不要整页闪成转圈
-        skipLoadingOnRefresh: true,
-        loading: () => _Scanning(
-          label:
-              _kind == MediaKind.video ? l.addScanningCourses : l.addScanning,
-        ),
-        error: (e, _) => EmptyState(
-          icon: Icons.cloud_off_outlined,
-          title: l.addScanFailed,
-          description: l.anyError(e),
-          action: FilledButton(
-            onPressed: () => ref.invalidate(mediaFoldersProvider(_kind)),
-            child: Text(l.actionRetry),
-          ),
-        ),
-        data: (all) => RefreshIndicator(
-          onRefresh: () => ref.refresh(mediaFoldersProvider(_kind).future),
-          child: _FolderList(
-            kind: _kind,
-            all: all,
-            visible: filterFolders(all, _query.text),
-            query: _query.text,
-          ),
-        ),
-      ),
+      body: !granted
+          ? EmptyState(
+              icon: Icons.lock_open_outlined,
+              title: l.addDevicePermissionTitle,
+              description: _kind == MediaKind.video
+                  ? l.addDevicePermissionVideo
+                  : l.addDevicePermissionAudio,
+              action: FilledButton(onPressed: _grant, child: Text(l.addGrant)),
+            )
+          : folders.when(
+              // 刷新时保留旧列表，不要整页闪成转圈
+              skipLoadingOnRefresh: true,
+              loading: () => _Scanning(
+                label: _kind == MediaKind.video
+                    ? l.addScanningCourses
+                    : l.addScanning,
+              ),
+              error: (e, _) => EmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: l.addScanFailed,
+                description: l.anyError(e),
+                action: FilledButton(
+                  onPressed: () => ref.invalidate(
+                    _device
+                        ? localMediaFoldersProvider(_kind)
+                        : mediaFoldersProvider(_kind),
+                  ),
+                  child: Text(l.actionRetry),
+                ),
+              ),
+              data: (all) => RefreshIndicator(
+                onRefresh: () => _device
+                    ? ref.refresh(localMediaFoldersProvider(_kind).future)
+                    : ref.refresh(mediaFoldersProvider(_kind).future),
+                child: _FolderList(
+                  kind: _kind,
+                  all: all,
+                  visible: filterFolders(all, _query.text),
+                  query: _query.text,
+                ),
+              ),
+            ),
     );
   }
 }
@@ -264,7 +318,7 @@ class _FolderTileState extends ConsumerState<_FolderTile> {
       title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         '${widget.kind == MediaKind.video ? l.addVideoCount(f.mediaCount) : l.addAudioCount(f.mediaCount)} · ${formatBytes(f.totalBytes)}\n'
-        '${f.parentPath}',
+        '${displayPath(f.parentPath)}',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall,

@@ -7,6 +7,8 @@ import 'package:yun_audiobook/data/drive/baidu/baidu_api_client.dart';
 import 'package:yun_audiobook/data/drive/baidu/baidu_drive_source.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
+import 'package:yun_audiobook/data/drive/local/local_media_source.dart';
+import 'package:yun_audiobook/data/drive/routing_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
@@ -35,6 +37,7 @@ class AppServices {
     required this.session,
     required this.bridge,
     required this.videoEngine,
+    required this.localMedia,
   });
 
   final AuthRepository auth;
@@ -50,6 +53,9 @@ class AppServices {
   /// 视频画面由界面直接画，需要拿到当前的播放器实例。
   final VideoEngine videoEngine;
 
+  /// 本机媒体：「添加书籍」本机栏的列表与授权。
+  final LocalMediaSource localMedia;
+
   /// [AudioService.init] 一个进程只能调一次。启动失败后「重试」会再走一遍
   /// [create]，那时复用第一次建好的桥，而不是再 init 一次。
   static AudioServiceBridge? _bridge;
@@ -62,7 +68,8 @@ class AppServices {
     final database = AppDatabase.open();
 
     // 演示模式换掉数据源，其余各层一行不用改——这正是 CloudDriveSource 抽象的用处
-    final drive = AppConfig.demoMode
+    final local = LocalMediaSource();
+    final remote = AppConfig.demoMode
         ? DemoDriveSource()
         : BaiduDriveSource(
             BaiduApiClient(auth),
@@ -70,6 +77,8 @@ class AppServices {
                 await database.settingsDao.read(SettingsDao.videoQualityKey) ??
                 SettingsDao.videoQualityDefault,
           );
+    // 网盘与本机合成一个数据源：书架、播放各层不用区分来源（add-local-media）
+    final drive = RoutingDriveSource(remote: remote, local: local);
 
     final library = LibraryRepository(
       drive: drive,
@@ -87,7 +96,11 @@ class AppServices {
     final videoEngine = _videoEngine ??= VideoEngine();
     final session = _bridge?.session ??
         PlaybackSession(
-          engine: CompositeEngine(audio: JustAudioEngine(), video: videoEngine),
+          engine: CompositeEngine(
+            audio: JustAudioEngine(),
+            video: videoEngine,
+            localAudio: JustAudioEngine.local(),
+          ),
           resolver: resolver,
           sink: _DatabasePlaybackSink(
             database: database,
@@ -120,6 +133,7 @@ class AppServices {
       session: bridge.session,
       bridge: bridge,
       videoEngine: videoEngine,
+      localMedia: local,
     );
   }
 }
