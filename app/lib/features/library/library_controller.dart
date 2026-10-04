@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/domain/entities.dart';
@@ -36,7 +38,17 @@ class LibraryController extends _$LibraryController {
         .read(libraryRepositoryProvider)
         .claimFolder(folderPath, titleOverride: title);
     ref.read(librarySyncProvider).markDirty();
+    // 封面在后台找：加完书先用首字占位，取到后书架自动换上（库变了界面就刷新）
+    unawaited(ref.read(coverServiceProvider).ensure(series));
     return series;
+  }
+
+  /// 从相册挑一张作封面。返回是否换了（取消返回 false）。
+  Future<bool> pickCover(Series series) async {
+    final path = await ref.read(servicesProvider).localMedia.pickImage();
+    if (path == null) return false;
+    await ref.read(coverServiceProvider).setManual(series.id, path);
+    return true;
   }
 
   /// 重新扫描网盘里的条目。只影响本地派生数据，不需要同步。

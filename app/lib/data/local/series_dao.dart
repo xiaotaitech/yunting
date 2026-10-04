@@ -162,6 +162,11 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
       (update(chapters)..where((c) => c.id.equals(episodeId)))
           .write(ChaptersCompanion(durationMs: Value(durationMs)));
 
+  /// 本机封面文件路径。只改这一列：它是本地派生数据，不改 updatedAt、不触发同步。
+  Future<void> setCoverLocalPath(String seriesId, String? path) =>
+      (update(books)..where((b) => b.id.equals(seriesId)))
+          .write(BooksCompanion(coverLocalPath: Value(path)));
+
   Future<void> updateEpisode(Episode episode) =>
       (update(chapters)..where((c) => c.id.equals(episode.id)))
           .write(_fromEpisode(episode));

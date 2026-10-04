@@ -40,6 +40,11 @@ class MainActivity : AudioServiceActivity() {
             when (call.method) {
                 "hasPermission" -> result.success(LocalMedia.hasPermission(this, kind))
                 "requestPermission" -> LocalMedia.requestPermission(this, kind, result)
+                "cover" -> Thread {
+                    val bytes = Covers.extract(this, call.argument<String>("uri") ?: "", kind)
+                    runOnUiThread { result.success(bytes) }
+                }.start()
+                "pickImage" -> Covers.pick(this, result)
                 "query" -> Thread {
                     try {
                         val rows = LocalMedia.query(this, kind)
@@ -53,6 +58,12 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    @Deprecated("仍是 FlutterActivity 拿到选图结果最直接的途径")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == Covers.PICK_REQUEST) Covers.onPickResult(this, resultCode, data)
     }
 
     override fun onRequestPermissionsResult(

@@ -41,6 +41,29 @@ class LocalMediaSource implements CloudDriveSource {
   /// 弹系统授权框；已授权直接返回 true。
   Future<bool> requestPermission(MediaKind kind) => _requestPermission(kind);
 
+  /// 本机文件的封面字节（音频内嵌图 / 视频一帧）；没有返回 null。
+  Future<Uint8List?> extractCover(String uri, MediaKind kind) async {
+    try {
+      return await _channel.invokeMethod<Uint8List>(
+        'cover',
+        {'uri': uri, 'kind': kind.name},
+      );
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// 系统照片选择器挑一张图，返回拷到缓存里的路径；取消返回 null。不需要任何权限。
+  Future<String?> pickImage() async {
+    try {
+      return await _channel.invokeMethod<String>('pickImage');
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
   @override
   String get id => 'local';
 

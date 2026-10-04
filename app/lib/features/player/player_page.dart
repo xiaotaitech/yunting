@@ -164,6 +164,7 @@ class _PlayerBody extends StatelessWidget {
                           return SeriesCover(
                             title: series.title,
                             coverFsId: series.coverFsId,
+                            localPath: series.coverLocalPath,
                             width: side,
                             height: side,
                             radius: 18,

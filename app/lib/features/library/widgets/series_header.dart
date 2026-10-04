@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yun_audiobook/domain/entities.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/common/widgets/series_cover.dart';
@@ -27,6 +28,7 @@ class SeriesHeader extends StatelessWidget {
           SeriesCover(
             title: series.title,
             coverFsId: series.coverFsId,
+            localPath: series.coverLocalPath,
             width: 84,
             height: 112,
             radius: 12,
@@ -48,10 +50,12 @@ class SeriesHeader extends StatelessWidget {
                   l.detailSummary(episodes.length, unit, formatBytes(total)),
                   style: theme.textTheme.bodySmall,
                 ),
-                Text(
-                  l.detailOfflineCount(cached, episodes.length, unit),
-                  style: theme.textTheme.bodySmall,
-                ),
+                // 本机书本来就在手机上、课程视频不能离线：「已离线 N 章」都没有意义
+                if (!series.isLocal && series.kind != SeriesKind.course)
+                  Text(
+                    l.detailOfflineCount(cached, episodes.length, unit),
+                    style: theme.textTheme.bodySmall,
+                  ),
                 if (series.sourceMissing)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),

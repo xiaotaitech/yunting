@@ -138,12 +138,17 @@ class _HistoryTile extends ConsumerWidget {
     final hint = theme.textTheme.bodySmall?.copyWith(color: theme.hintColor);
 
     return ListTile(
-      leading: SeriesCover(
-        title: entry.seriesTitle,
-        coverFsId: entry.coverFsId,
-        width: 40,
-        height: 54,
-        radius: 6,
+      // 历史条目只快照了网盘封面 id；本机封面（自动取的 / 手动选的）按合集现查
+      leading: Consumer(
+        builder: (context, ref, _) => SeriesCover(
+          title: entry.seriesTitle,
+          coverFsId: entry.coverFsId,
+          localPath:
+              ref.watch(seriesProvider(entry.seriesId)).value?.coverLocalPath,
+          width: 40,
+          height: 54,
+          radius: 6,
+        ),
       ),
       title: Text(
         entry.episodeTitle,

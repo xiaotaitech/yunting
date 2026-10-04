@@ -687,5 +687,7 @@
   "addDevicePermissionAudio": "授权后列出手机里所有装着音频的文件夹，直接播放，不复制、不上传。",
   "addDevicePermissionVideo": "授权后列出手机里所有装着视频的文件夹，直接播放，不复制、不上传。",
   "addGrant": "授权",
-  "addSearchHintDevice": "搜索本机的文件夹"
+  "addSearchHintDevice": "搜索本机的文件夹",
+  "detailMenuCover": "更换封面",
+  "detailCoverChanged": "封面已更换"
 }

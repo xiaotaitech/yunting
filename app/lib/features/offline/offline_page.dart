@@ -215,6 +215,7 @@ class _CachedSeriesTile extends ConsumerWidget {
       leading: SeriesCover(
         title: series.title,
         coverFsId: series.coverFsId,
+        localPath: series.coverLocalPath,
         width: 40,
         height: 54,
         radius: 6,

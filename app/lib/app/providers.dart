@@ -13,6 +13,7 @@ import 'package:yun_audiobook/app/app_services.dart';
 import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/core/natural_sort.dart';
 import 'package:yun_audiobook/data/auth/auth_repository.dart';
+import 'package:yun_audiobook/data/covers/cover_service.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
@@ -60,6 +61,9 @@ PlaybackSession playbackSession(Ref ref) => ref.watch(servicesProvider).session;
 
 @Riverpod(keepAlive: true)
 AudioServiceBridge audioBridge(Ref ref) => ref.watch(servicesProvider).bridge;
+
+@Riverpod(keepAlive: true)
+CoverService coverService(Ref ref) => ref.watch(servicesProvider).covers;
 
 /// 当前的视频播放器实例（无视频时为 null）。播放页用它画画面。
 @Riverpod(keepAlive: true)

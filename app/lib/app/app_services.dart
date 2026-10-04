@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/data/auth/auth_repository.dart';
+import 'package:yun_audiobook/data/covers/cover_service.dart';
 import 'package:yun_audiobook/data/drive/baidu/baidu_api_client.dart';
 import 'package:yun_audiobook/data/drive/baidu/baidu_drive_source.dart';
 import 'package:yun_audiobook/data/drive/cloud_drive_source.dart';
@@ -38,6 +39,7 @@ class AppServices {
     required this.bridge,
     required this.videoEngine,
     required this.localMedia,
+    required this.covers,
   });
 
   final AuthRepository auth;
@@ -55,6 +57,9 @@ class AppServices {
 
   /// 本机媒体：「添加书籍」本机栏的列表与授权。
   final LocalMediaSource localMedia;
+
+  /// 自动封面与手动更换封面。
+  final CoverService covers;
 
   /// [AudioService.init] 一个进程只能调一次。启动失败后「重试」会再走一遍
   /// [create]，那时复用第一次建好的桥，而不是再 init 一次。
@@ -87,6 +92,17 @@ class AppServices {
     );
     final resolver = PlaybackUrlResolver(drive);
     final sync = LibrarySync(drive: drive, db: database);
+    final covers = CoverService(
+      dao: database.seriesDao,
+      drive: drive,
+      extractLocal: local.extractCover,
+    );
+    // 已在书架上、还没封面的书：启动稳定后在后台补一遍（新加的书在认领时补）
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 5), () async {
+        await covers.backfill(await database.seriesDao.shelf());
+      }),
+    );
     final downloads = DownloadManager(
       drive: drive,
       resolver: resolver,
@@ -134,6 +150,7 @@ class AppServices {
       bridge: bridge,
       videoEngine: videoEngine,
       localMedia: local,
+      covers: covers,
     );
   }
 }

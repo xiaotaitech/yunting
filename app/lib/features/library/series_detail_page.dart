@@ -66,6 +66,7 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
             onSelected: (v) => _onMenu(v, series),
             itemBuilder: (_) => [
               PopupMenuItem(value: 'edit', child: Text(l.detailMenuEdit)),
+              PopupMenuItem(value: 'cover', child: Text(l.detailMenuCover)),
               PopupMenuItem(value: 'refresh', child: Text(l.detailMenuRefresh)),
               // 纯视频的课程、本机书都没有要离线的内容，下载与清缓存都不出现
               if (series.kind != SeriesKind.course && !series.isLocal) ...[
@@ -109,6 +110,11 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
     final l = context.l10n;
 
     switch (value) {
+      case 'cover':
+        // 系统照片选择器，不需要权限；取消就什么都不变
+        if (await _library.pickCover(series)) {
+          messenger.showSnackBar(SnackBar(content: Text(l.detailCoverChanged)));
+        }
       case 'edit':
         final edited = await editSeriesDialog(context, series);
         if (edited == null) return;

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -51,12 +52,16 @@ class SeriesCover extends ConsumerWidget {
     required this.coverFsId,
     required this.width,
     required this.height,
+    this.localPath,
     super.key,
     this.radius = 10,
   });
 
   final String title;
   final String? coverFsId;
+
+  /// 本机封面文件（自动从媒体里取的、或用户手动选的），优先于网盘封面图。
+  final String? localPath;
   final double width;
   final double height;
   final double radius;
@@ -66,7 +71,18 @@ class SeriesCover extends ConsumerWidget {
     final fsId = coverFsId;
 
     Widget child = _Placeholder(title: title, width: width, height: height);
-    if (fsId != null && fsId.isNotEmpty) {
+    final local = localPath;
+    if (local != null && File(local).existsSync()) {
+      child = Image.file(
+        File(local),
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) =>
+            _Placeholder(title: title, width: width, height: height),
+      );
+    } else if (fsId != null && fsId.isNotEmpty) {
       // 加载中与失败都落回占位，不放 spinner：封面区域一闪一闪比慢一点更难受
       final bytes = ref.watch(coverBytesProvider(fsId)).value;
       if (bytes != null) {

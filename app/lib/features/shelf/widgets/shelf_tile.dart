@@ -45,6 +45,7 @@ class ShelfTile extends ConsumerWidget {
               SeriesCover(
                 title: series.title,
                 coverFsId: series.coverFsId,
+                localPath: series.coverLocalPath,
                 width: 60,
                 height: 80,
               ),

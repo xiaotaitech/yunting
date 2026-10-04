@@ -25,6 +25,94 @@ class Id3Parser {
     return AudioTags.empty;
   }
 
+  /// 标签总长（含 10 字节头）。不是 ID3v2 时返回 null。
+  /// 用来决定封面要读多少字节：图片帧就在标签里，标签之外不必读。
+  static int? tagLength(Uint8List header) {
+    if (header.length < 10) return null;
+    if (header[0] != 0x49 || header[1] != 0x44 || header[2] != 0x33) {
+      return null;
+    }
+    return 10 + _syncSafe(header, 6);
+  }
+
+  /// 内嵌封面（APIC / v2.2 的 PIC 帧）的图片字节。优先「封面」类型（3），
+  /// 没有就取第一张。没有或损坏返回 null——封面是装饰，不能影响任何流程。
+  static Uint8List? picture(Uint8List b) {
+    try {
+      return _picture(b);
+    } on Object catch (_) {
+      return null;
+    }
+  }
+
+  static Uint8List? _picture(Uint8List b) {
+    if (b.length < 10) return null;
+    if (b[0] != 0x49 || b[1] != 0x44 || b[2] != 0x33) return null;
+    final major = b[3];
+    if (major != 2 && major != 3 && major != 4) return null;
+    final end = (10 + _syncSafe(b, 6)).clamp(0, b.length);
+    final idLength = major == 2 ? 3 : 4;
+    final headerLength = major == 2 ? 6 : 10;
+
+    Uint8List? first;
+    var offset = 10;
+    while (offset + headerLength <= end) {
+      if (b[offset] == _nul) break;
+      final id = String.fromCharCodes(b.sublist(offset, offset + idLength));
+      final size = major == 2
+          ? (b[offset + 3] << 16) | (b[offset + 4] << 8) | b[offset + 5]
+          : major == 4
+              ? _syncSafe(b, offset + 4)
+              : (b[offset + 4] << 24) |
+                  (b[offset + 5] << 16) |
+                  (b[offset + 6] << 8) |
+                  b[offset + 7];
+      final dataStart = offset + headerLength;
+      final dataEnd = dataStart + size;
+      if (size <= 0 || dataEnd > b.length) break;
+
+      if (id == 'APIC' || id == 'PIC') {
+        final d = b.sublist(dataStart, dataEnd);
+        final encoding = d[0];
+        var i = 1;
+        if (id == 'PIC') {
+          i += 3; // 固定三字节格式，如 "JPG"
+        } else {
+          while (i < d.length && d[i] != _nul) {
+            i++; // MIME，Latin-1，NUL 结尾
+          }
+          i++;
+        }
+        final type = d[i];
+        i++;
+        // 描述：UTF-16 系编码以两个 NUL 结尾，其余一个
+        final wide = encoding == 1 || encoding == 2;
+        while (i < d.length) {
+          if (wide) {
+            if (i + 1 < d.length && d[i] == _nul && d[i + 1] == _nul) {
+              i += 2;
+              break;
+            }
+            i += 2;
+          } else {
+            if (d[i] == _nul) {
+              i++;
+              break;
+            }
+            i++;
+          }
+        }
+        if (i < d.length) {
+          final image = Uint8List.fromList(d.sublist(i));
+          if (type == 3) return image;
+          first ??= image;
+        }
+      }
+      offset = dataEnd;
+    }
+    return first;
+  }
+
   static AudioTags? _parseV2(Uint8List b) {
     if (b.length < 10) return null;
     if (b[0] != 0x49 || b[1] != 0x44 || b[2] != 0x33) return null; // "ID3"

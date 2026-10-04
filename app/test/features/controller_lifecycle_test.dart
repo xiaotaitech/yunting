@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show DatabaseConnection;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yun_audiobook/app/providers.dart';
+import 'package:yun_audiobook/data/covers/cover_service.dart';
 import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
@@ -44,6 +47,14 @@ void main() {
     container = ProviderContainer(
       overrides: [
         playbackSessionProvider.overrideWithValue(session),
+        coverServiceProvider.overrideWithValue(
+          CoverService(
+            dao: db.seriesDao,
+            drive: drive,
+            extractLocal: (_, __) async => null,
+            dir: () async => Directory.systemTemp,
+          ),
+        ),
         databaseProvider.overrideWithValue(db),
         librarySyncProvider.overrideWithValue(sync),
         libraryRepositoryProvider.overrideWithValue(

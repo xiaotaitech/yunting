@@ -42,6 +42,7 @@ class MiniPlayer extends ConsumerWidget {
                   SeriesCover(
                     title: series.title,
                     coverFsId: series.coverFsId,
+                    localPath: series.coverLocalPath,
                     width: 40,
                     height: 40,
                     radius: 6,

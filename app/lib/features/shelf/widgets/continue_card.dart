@@ -146,6 +146,7 @@ class _CardBody extends ConsumerWidget {
         SeriesCover(
           title: series.title,
           coverFsId: series.coverFsId,
+          localPath: series.coverLocalPath,
           width: 64,
           height: 86,
         ),
