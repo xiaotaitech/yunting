@@ -30,8 +30,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // 授权一成功，router 的 redirect 就会把本页换掉（State 随之 dispose，
     // ref 失效），所以后面要用到的都在这里先取好。
     final auth = ref.read(authRepositoryProvider);
-    final sync = ref.read(librarySyncProvider);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -42,15 +40,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       setState(() => _session = session);
 
       await auth.awaitDeviceAuth(session);
-
-      // 新设备首次授权：从网盘拉回书架与进度。
-      // 不判断 mounted：此时页面多半已经被路由换走了，恢复仍要做完。
-      final restored = await sync.restoreFromCloud();
-      if (restored > 0) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.loginRestored(restored))),
-        );
-      }
     } on DriveException catch (e) {
       // 这里的错误都是设备码流程内部抛的、写给人看的具体原因
       // （码过期 / 用户拒绝 / 等待超时）。用按 kind 归类的 driveError 会变成

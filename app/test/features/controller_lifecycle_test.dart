@@ -9,7 +9,6 @@ import 'package:yun_audiobook/data/covers/cover_service.dart';
 import 'package:yun_audiobook/data/drive/demo/demo_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
-import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
@@ -24,7 +23,7 @@ import '../support/playback_fakes.dart';
 ///
 /// 回归：它们原来是自动释放的，没人 watch。「加入书架」时
 /// `claim` 在第一个 await 之后 provider 已被回收，紧接着的
-/// `ref.read(librarySyncProvider)` 抛「Cannot use the Ref after it has been
+/// `ref.read(...)` 抛「Cannot use the Ref after it has been
 /// disposed」——书其实已经加进库了，界面却既不回书架也不提示。
 /// 只记录「清了哪本的缓存」的下载管理器。
 class RecordingDownloads implements DownloadManager {
@@ -39,7 +38,6 @@ class RecordingDownloads implements DownloadManager {
 
 void main() {
   late AppDatabase db;
-  late LibrarySync sync;
   late ProviderContainer container;
   late PlaybackSession session;
   late RecordingDownloads downloads;
@@ -52,7 +50,6 @@ void main() {
       ),
     );
     final drive = DemoDriveSource();
-    sync = LibrarySync(drive: drive, db: db);
     downloads = RecordingDownloads();
     session = PlaybackSession(
       engine: FakeEngine(),
@@ -73,7 +70,6 @@ void main() {
           ),
         ),
         databaseProvider.overrideWithValue(db),
-        librarySyncProvider.overrideWithValue(sync),
         libraryRepositoryProvider.overrideWithValue(
           LibraryRepository(
             drive: drive,
@@ -87,7 +83,6 @@ void main() {
 
   tearDown(() async {
     await session.dispose();
-    sync.dispose();
     container.dispose();
     await db.close();
   });

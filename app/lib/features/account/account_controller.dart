@@ -12,9 +12,11 @@ class AccountController extends _$AccountController {
   void build() {}
 
   /// 退出登录。必须一并清掉地址缓存——旧令牌拼出的地址已无意义
-  /// （netdisk-auth 规格「用户主动退出登录」）。书架与进度保留在本机。
+  /// （netdisk-auth 规格「用户主动退出登录」）。书架与进度保留在本机；
+  /// 网盘目录缓存清掉——下次登录的可能是另一个账号。
   Future<void> signOut() async {
     ref.read(servicesProvider).resolver.clear();
+    await ref.read(databaseProvider).driveCacheDao.clear();
     await ref.read(playbackSessionProvider).stop();
     await ref.read(authRepositoryProvider).signOut();
   }

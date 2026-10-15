@@ -1,7 +1,6 @@
 /// 路由路径的唯一来源。页面之间跳转一律经这里拼地址，不手写字符串。
 abstract final class Routes {
   static const shelf = '/shelf';
-  static const history = '/history';
   static const mine = '/mine';
   static const login = '/login';
   static const player = '/player';

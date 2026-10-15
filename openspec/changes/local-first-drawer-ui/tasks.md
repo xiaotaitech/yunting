@@ -1,0 +1,29 @@
+## 1. 只存本地
+
+- [x] 1.1 删除 LibrarySync / LibrarySnapshot 及其测试、同步按钮、同步设置项、登录后恢复
+- [x] 1.2 CloudDriveSource 去掉 readAppStateFile / writeAppStateFile（含各实现与测试替身）
+- [x] 1.3 帮助文档与文案去掉同步相关内容
+
+## 2. 网盘目录缓存
+
+- [x] 2.1 库 v3 → v4：drive_cache 表 + 迁移测试
+- [x] 2.2 DriveCacheDao（读 / 写 / 清空）与 DriveEntry 序列化
+- [x] 2.3 mediaFolders、browse 改为先出缓存、后台刷新；刷新失败但有缓存时不报错
+- [x] 2.4 退出登录清空缓存
+
+## 3. 搜索历史
+
+- [x] 3.1 SearchHistory 存取（去重、上限 10、最近在前）+ 单元测试
+- [x] 3.2 添加书籍页：搜索框为空时显示历史标签；提交 / 加书时记录；单条删除与清空
+
+## 4. 抽屉导航与视觉
+
+- [x] 4.1 路由：去掉 StatefulShellRoute 与历史页，ShellRoute 保留迷你播放条
+- [x] 4.2 抽屉：添加书籍、离线管理、最近收听（按天分组、续播、清空）、「我的」入口；只在书架根页可边缘滑出
+- [x] 4.3 新主题（亮 / 暗）、淡入前推转场
+- [x] 4.4 书架右上角「＋」取代悬浮按钮；触感反馈
+
+## 5. 验证
+
+- [x] 5.1 flutter analyze、flutter test
+- [x] 5.2 模拟器（skiff）：抽屉开合、历史续播、添加书籍二次进入秒开、搜索历史、亮暗主题截图

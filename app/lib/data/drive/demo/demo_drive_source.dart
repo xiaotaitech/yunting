@@ -69,9 +69,6 @@ class DemoDriveSource implements CloudDriveSource {
     ],
   };
 
-  /// 同步状态文件写在本地，这样重启后书架还在，跟真实行为一致。
-  final Map<String, String> _stateFiles = {};
-
   @override
   String get id => 'demo';
 
@@ -189,23 +186,6 @@ class DemoDriveSource implements CloudDriveSource {
     int start = 0,
   }) async =>
       File(Uri.parse(media.url).toFilePath()).openRead(start);
-
-  @override
-  Future<String?> readAppStateFile(String path) async {
-    final cached = _stateFiles[path];
-    if (cached != null) return cached;
-    final file = File(p.join((await _demoDir()).path, 'state.json'));
-    if (!file.existsSync()) return null;
-    return file.readAsString();
-  }
-
-  @override
-  Future<void> writeAppStateFile(String path, String content) async {
-    _stateFiles[path] = content;
-    final file = File(p.join((await _demoDir()).path, 'state.json'));
-    await file.writeAsString(content);
-    Log.d('demo', '演示网盘已保存状态文件（${content.length} 字节）');
-  }
 
   // ------------------------------------------------------------ 音频生成
 

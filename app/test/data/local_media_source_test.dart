@@ -6,7 +6,6 @@ import 'package:yun_audiobook/data/drive/local/local_media_source.dart';
 import 'package:yun_audiobook/data/drive/routing_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
-import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/domain/local_media.dart';
 
@@ -35,18 +34,6 @@ final Map<MediaKind,
     ),
   ],
 };
-
-/// 演示网盘，但同步文件存在内存里（单测里没有 path_provider）。
-class MemoryStateDemo extends DemoDriveSource {
-  final files = <String, String>{};
-
-  @override
-  Future<String?> readAppStateFile(String path) async => files[path];
-
-  @override
-  Future<void> writeAppStateFile(String path, String content) async =>
-      files[path] = content;
-}
 
 LocalMediaSource fakeLocal({bool granted = true}) => LocalMediaSource(
       query: (k) async => rows[k]!,
@@ -92,7 +79,7 @@ void main() {
         DatabaseConnection(NativeDatabase.memory(),
             closeStreamsSynchronously: true),
       );
-      drive = RoutingDriveSource(remote: MemoryStateDemo(), local: fakeLocal());
+      drive = RoutingDriveSource(remote: DemoDriveSource(), local: fakeLocal());
       library = LibraryRepository(
         drive: drive,
         dao: db.seriesDao,
@@ -122,18 +109,6 @@ void main() {
     test('本机视频文件夹认领为课程', () async {
       final s = await library.claimFolder('local:/Movies/英语');
       expect(s.kind, SeriesKind.course);
-    });
-
-    test('本机书不进同步文件', () async {
-      await library.claimFolder('local:/Music/三体');
-      await library.claimFolder('/我的有声书/小王子');
-      final sync = LibrarySync(drive: drive, db: db);
-      await sync.syncNow();
-      final uploaded =
-          await drive.readAppStateFile('/apps/yun_audiobook/library.json');
-      expect(uploaded, contains('小王子'));
-      expect(uploaded, isNot(contains('local:')));
-      sync.dispose();
     });
   });
 }

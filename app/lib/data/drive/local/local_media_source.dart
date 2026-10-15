@@ -148,13 +148,6 @@ class LocalMediaSource implements CloudDriveSource {
   Future<Stream<List<int>>> openStream(ResolvedMedia media, {int start = 0}) =>
       throw const DriveException(DriveErrorKind.api, '本机文件无需下载');
 
-  /// 同步文件只在网盘上；本机书不进同步。
-  @override
-  Future<String?> readAppStateFile(String path) async => null;
-
-  @override
-  Future<void> writeAppStateFile(String path, String content) async {}
-
   static DriveEntry _toEntry(LocalMediaRow r, MediaKind kind) => DriveEntry(
         fsId: localFsId(kind, r.id),
         path: '$localPrefix${r.path}',

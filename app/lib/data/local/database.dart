@@ -7,13 +7,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'package:yun_audiobook/core/config.dart';
+import 'package:yun_audiobook/data/local/drive_cache_dao.dart';
 import 'package:yun_audiobook/data/local/history_dao.dart';
 import 'package:yun_audiobook/data/local/series_dao.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
 
 part 'database.g.dart';
 
-/// 本地 SQLite 是书架与进度的权威读写来源；网盘只是同步载体（design.md D5）。
+/// 本地 SQLite 是书架、进度与历史的唯一存储（local-first-drawer-ui 起不再同步到网盘）。
 ///
 /// 表名与列名沿用 v2（sqflite 时代）的写法，一个字都不改：drift 直接打开
 /// 老用户手机上那个库文件，按 `PRAGMA user_version` 走增量迁移。
@@ -119,9 +120,22 @@ class PlayHistory extends Table {
   BoolColumn get finished => boolean().withDefault(const Constant(false))();
 }
 
+/// 网盘目录列表缓存（v4，local-first-drawer-ui）。
+///
+/// 键是 `media:<类型>`（整盘媒体扫描）或 `dir:<路径>`（按目录浏览），
+/// 值是条目列表的 JSON。只是加速用的副本，随时可以整表清掉。
+class DriveCache extends Table {
+  TextColumn get key => text()();
+  TextColumn get json => text()();
+  IntColumn get fetchedAt => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
 @DriftDatabase(
-  tables: [Books, Chapters, SyncMeta, PlayHistory],
-  daos: [SeriesDao, HistoryDao, SettingsDao],
+  tables: [Books, Chapters, SyncMeta, PlayHistory, DriveCache],
+  daos: [SeriesDao, HistoryDao, SettingsDao, DriveCacheDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
@@ -131,7 +145,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(_openFile());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +161,8 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(books, books.kind);
             await m.addColumn(chapters, chapters.mediaKind);
           }
+          // v3 -> v4：网盘目录缓存。
+          if (from < 4) await m.createTable(driveCache);
         },
         // 级联删除（删书连带删章节）依赖它；SQLite 默认是关的，每次连接都要开。
         beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),

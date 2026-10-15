@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/features/player/widgets/skip_icon.dart';
@@ -56,7 +59,10 @@ class TransportControls extends ConsumerWidget {
                   iconSize: 40,
                   tooltip: playing ? l.playerPause : l.playerPlay,
                   icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                  onPressed: playing ? session.pause : session.play,
+                  onPressed: () {
+                    unawaited(HapticFeedback.selectionClick());
+                    unawaited(playing ? session.pause() : session.play());
+                  },
                 ),
               ),
             ],

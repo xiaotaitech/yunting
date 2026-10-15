@@ -18,6 +18,15 @@ class DriveEntry {
     this.thumbnailUrl,
   });
 
+  factory DriveEntry.fromJson(Map<String, Object?> j) => DriveEntry(
+        fsId: j['fsId']! as String,
+        path: j['path']! as String,
+        name: j['name']! as String,
+        isDirectory: j['dir']! as bool,
+        size: j['size']! as int,
+        serverMtime: j['mtime'] as int?,
+      );
+
   final String fsId;
   final String path;
   final String name;
@@ -36,6 +45,16 @@ class DriveEntry {
     final dot = name.lastIndexOf('.');
     return dot < 0 ? name : name.substring(0, dot);
   }
+
+  /// 目录缓存（drive_cache 表）用。缩略图地址带时效，不存。
+  Map<String, Object?> toJson() => {
+        'fsId': fsId,
+        'path': path,
+        'name': name,
+        'dir': isDirectory,
+        'size': size,
+        'mtime': serverMtime,
+      };
 }
 
 /// 播放地址的形态。
@@ -101,10 +120,4 @@ abstract class CloudDriveSource {
 
   /// 从 [start] 字节开始打开一个已解析地址的字节流。离线下载（断点续传）用它。
   Future<Stream<List<int>>> openStream(ResolvedMedia media, {int start = 0});
-
-  /// 读取应用专属目录下的状态文件，不存在时返回 null。
-  Future<String?> readAppStateFile(String path);
-
-  /// 写入应用专属目录下的状态文件。
-  Future<void> writeAppStateFile(String path, String content);
 }

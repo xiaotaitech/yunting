@@ -169,6 +169,7 @@ class ShelfTile extends ConsumerWidget {
               if (!selecting)
                 IconButton(
                   tooltip: l.shelfContinue,
+                  color: theme.colorScheme.primary,
                   icon: const Icon(Icons.play_circle_fill, size: 36),
                   onPressed: series.sourceMissing
                       ? null

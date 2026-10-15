@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:yun_audiobook/core/config.dart';
@@ -242,73 +240,6 @@ class BaiduDriveSource implements CloudDriveSource {
       range: start > 0 ? 'bytes=$start-' : null,
     );
     return res.stream;
-  }
-
-  // ------------------------------------------------------- 应用状态文件
-
-  @override
-  Future<String?> readAppStateFile(String path) async {
-    try {
-      final dir = path.substring(0, path.lastIndexOf('/'));
-      final name = path.substring(path.lastIndexOf('/') + 1);
-      final entries = await listDirectory(dir);
-      final target = entries.where((e) => e.name == name && !e.isDirectory);
-      if (target.isEmpty) return null;
-      final media = await resolveMedia(target.first.fsId);
-      final bytes = await _api.readRange(media.url, 0, target.first.size - 1);
-      return utf8.decode(bytes);
-    } on DriveException catch (e) {
-      // 目录还不存在是正常的首次状态，不该当作错误冒泡。
-      if (e.kind == DriveErrorKind.notFound) return null;
-      rethrow;
-    }
-  }
-
-  /// 上传状态文件。走 precreate → superfile2 → create 三步，
-  /// rtype=3 表示同名文件直接覆盖。
-  @override
-  Future<void> writeAppStateFile(String path, String content) async {
-    final bytes = Uint8List.fromList(utf8.encode(content));
-    final blockMd5 = md5.convert(bytes).toString();
-    final blockList = jsonEncode([blockMd5]);
-
-    final pre = await _api.postForm(
-      '/xpan/file',
-      {'method': 'precreate'},
-      {
-        'path': path,
-        'size': '${bytes.length}',
-        'isdir': '0',
-        'autoinit': '1',
-        'rtype': '3',
-        'block_list': blockList,
-      },
-    );
-    final uploadId = pre['uploadid'] as String?;
-    if (uploadId == null) {
-      throw const DriveException(DriveErrorKind.api, 'precreate 未返回 uploadid');
-    }
-
-    await _api.uploadSlice(
-      path: path,
-      uploadId: uploadId,
-      partSeq: 0,
-      bytes: bytes,
-    );
-
-    await _api.postForm(
-      '/xpan/file',
-      {'method': 'create'},
-      {
-        'path': path,
-        'size': '${bytes.length}',
-        'isdir': '0',
-        'rtype': '3',
-        'uploadid': uploadId,
-        'block_list': blockList,
-      },
-    );
-    Log.d('baidu', '状态文件已同步至 $path（${bytes.length} 字节）');
   }
 
   // ------------------------------------------------------- 内部

@@ -2,7 +2,6 @@
   "@@locale": "zh",
   "appName": "云听书",
   "navShelf": "书架",
-  "navHistory": "历史",
   "navMine": "我的",
   "actionCancel": "取消",
   "actionConfirm": "确定",
@@ -14,31 +13,6 @@
     "placeholders": {
       "detail": {
         "type": "String"
-      }
-    }
-  },
-  "timeJustNow": "刚刚",
-  "timeMinutesAgo": "{n} 分钟前",
-  "@timeMinutesAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "timeTodayAt": "今天 {hm}",
-  "@timeTodayAt": {
-    "placeholders": {
-      "hm": {
-        "type": "String"
-      }
-    }
-  },
-  "timeDaysAgo": "{n} 天前",
-  "@timeDaysAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
       }
     }
   },
@@ -140,19 +114,8 @@
     }
   },
   "shelfAdd": "添加书籍",
-  "shelfSync": "同步",
-  "shelfSyncing": "正在同步",
-  "shelfSyncDone": "同步完成，书架 {count} 本",
-  "@shelfSyncDone": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "shelfSyncFailed": "同步失败，稍后会自动重试",
   "shelfEmptyTitle": "书架还是空的",
-  "shelfEmptyDescription": "点右下角「添加书籍」，从你的百度网盘里挑一个装着有声书的文件夹加进来。",
+  "shelfEmptyDescription": "点下面的「添加书籍」，从你的百度网盘里挑一个装着有声书的文件夹加进来。",
   "shelfContinue": "继续收听",
   "shelfContinueRestart": "已听完 · 点击从第一{unit}重新开始",
   "@shelfContinueRestart": {
@@ -347,35 +310,14 @@
     }
   },
   "browseEmptyFolder": "这个文件夹是空的",
-  "historyTitle": "播放历史",
   "historyClearTooltip": "清空历史",
-  "historyEmptyTitle": "还没有收听记录",
-  "historyEmptyDescription": "听过的章节会按时间记在这里，随时能回来接着听。记录只存在这台设备上，不会同步到网盘。",
+  "historyEmptyDescription": "还没有收听记录。听过的章节会按时间记在这里，点一下就能接着听。记录只存在这台设备上。",
   "historyClearTitle": "清空播放历史",
   "historyClearBody": "只清除收听记录。书架、收听进度与离线缓存都不受影响。",
   "historyClearConfirm": "清空",
   "historyFinished": "听完",
   "historyNotOnShelf": "这本书已不在书架，无法继续播放",
   "mineGroupListen": "收听",
-  "mineSyncNow": "立即同步",
-  "mineNeverSynced": "尚未同步过 · 状态存于网盘 {dir}",
-  "@mineNeverSynced": {
-    "placeholders": {
-      "dir": {
-        "type": "String"
-      }
-    }
-  },
-  "mineLastSync": "上次同步：{time}",
-  "@mineLastSync": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "mineSyncDone": "同步完成",
-  "mineSyncFailed": "同步失败，稍后会自动重试",
   "mineGroupPlayback": "播放",
   "mineResumeTitle": "中断后自动恢复播放",
   "mineResumeSubtitle": "来电等打断结束后自动继续，关闭则保持暂停",
@@ -478,14 +420,6 @@
   "loginBusy": "授权进行中…",
   "loginAuthorize": "授权百度网盘",
   "loginPrivacy": "本应用只读取你本人网盘中的文件，不会上传音频，也不提供任何分享或他人资源访问功能。",
-  "loginRestored": "已从网盘恢复 {n} 本书",
-  "@loginRestored": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "setupTitle": "需要先完成配置",
   "setupMissing": "尚未注入百度网盘 AppKey 与 OAuth 代理地址，应用无法访问网盘。",
   "setupCopy": "复制配置步骤",
@@ -728,5 +662,10 @@
       }
     }
   },
-  "shelfUndo": "撤销"
+  "shelfUndo": "撤销",
+  "cacheRefreshFailed": "刷新失败，显示的是上次的结果",
+  "addRecentSearches": "最近搜索",
+  "addClearSearches": "清空",
+  "drawerRecent": "最近收听",
+  "drawerOpen": "打开菜单"
 }

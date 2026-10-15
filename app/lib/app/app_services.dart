@@ -13,7 +13,6 @@ import 'package:yun_audiobook/data/drive/routing_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
-import 'package:yun_audiobook/data/sync/library_sync.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/playback/audio_service_bridge.dart';
 import 'package:yun_audiobook/playback/composite_engine.dart';
@@ -34,7 +33,6 @@ class AppServices {
     required this.library,
     required this.resolver,
     required this.downloads,
-    required this.sync,
     required this.session,
     required this.bridge,
     required this.videoEngine,
@@ -48,7 +46,6 @@ class AppServices {
   final LibraryRepository library;
   final PlaybackUrlResolver resolver;
   final DownloadManager downloads;
-  final LibrarySync sync;
   final PlaybackSession session;
   final AudioServiceBridge bridge;
 
@@ -91,7 +88,6 @@ class AppServices {
       deviceId: auth.deviceId,
     );
     final resolver = PlaybackUrlResolver(drive);
-    final sync = LibrarySync(drive: drive, db: database);
     final covers = CoverService(
       dao: database.seriesDao,
       drive: drive,
@@ -131,7 +127,6 @@ class AppServices {
             database: database,
             auth: auth,
             resolver: resolver,
-            sync: sync,
           ),
         );
 
@@ -154,7 +149,6 @@ class AppServices {
       library: library,
       resolver: resolver,
       downloads: downloads,
-      sync: sync,
       session: bridge.session,
       bridge: bridge,
       videoEngine: videoEngine,
@@ -164,19 +158,17 @@ class AppServices {
   }
 }
 
-/// 播放会话的真实出口：进度写库、记历史、标记待同步、回填时长、鉴权失效登出。
+/// 播放会话的真实出口：进度写库、记历史、回填时长、鉴权失效登出。
 class _DatabasePlaybackSink implements PlaybackSink {
   _DatabasePlaybackSink({
     required this.database,
     required this.auth,
     required this.resolver,
-    required this.sync,
   });
 
   final AppDatabase database;
   final AuthRepository auth;
   final PlaybackUrlResolver resolver;
-  final LibrarySync sync;
 
   @override
   Future<void> progress({
@@ -194,14 +186,13 @@ class _DatabasePlaybackSink implements PlaybackSink {
       finished: finished,
     );
     // 播放历史蹭同一个上报节奏（每 5 秒），同一集会合并成一条记录，
-    // 不会每次上报插一行。历史只存本机，不进同步。
+    // 不会每次上报插一行。
     await database.historyDao.record(
       seriesId: seriesId,
       episodeIndex: episodeIndex,
       positionMs: positionMs,
       episodeFinished: episodeFinished,
     );
-    sync.markDirty();
   }
 
   @override

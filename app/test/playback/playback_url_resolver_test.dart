@@ -47,12 +47,6 @@ class FakeDrive implements CloudDriveSource {
 
   @override
   Future<List<DriveEntry>> listMediaFiles(MediaKind kind) async => const [];
-
-  @override
-  Future<String?> readAppStateFile(String path) async => null;
-
-  @override
-  Future<void> writeAppStateFile(String path, String content) async {}
 }
 
 Episode episode({String fsId = '1001'}) => Episode(

@@ -22,24 +22,6 @@ String formatSpeed(double speed) {
   return '${text.endsWith('0') ? text.substring(0, text.length - 1) : text}x';
 }
 
-/// 同步时间。
-///
-/// 原来直接把 `DateTime` 塞进字符串，界面上就是
-/// `2026-09-02 14:30:42.414`——毫秒对用户毫无意义，还暴露实现细节。
-/// 刚同步过的时候「几分钟前」比绝对时间好读；隔天了再给日期。
-String formatSyncTime(AppLocalizations l, DateTime at, {DateTime? now}) {
-  final ref = now ?? DateTime.now();
-  final diff = ref.difference(at);
-
-  if (diff.isNegative || diff.inMinutes < 1) return l.timeJustNow;
-  if (diff.inMinutes < 60) return l.timeMinutesAgo(diff.inMinutes);
-  if (diff.inHours < 24 && at.day == ref.day) {
-    return l.timeTodayAt(formatClock(at));
-  }
-  if (diff.inDays < 7) return l.timeDaysAgo(diff.inDays == 0 ? 1 : diff.inDays);
-  return '${_two(at.month)}-${_two(at.day)} ${_two(at.hour)}:${_two(at.minute)}';
-}
-
 String _two(int n) => n.toString().padLeft(2, '0');
 
 /// 历史列表的日期分组标题。今天 / 昨天 / 本年内不带年 / 跨年带年。

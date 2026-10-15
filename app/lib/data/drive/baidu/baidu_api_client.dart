@@ -94,68 +94,6 @@ class BaiduApiClient {
     });
   }
 
-  Future<Map<String, dynamic>> postForm(
-    String path,
-    Map<String, String> query,
-    Map<String, String> form, {
-    bool isPcs = false,
-  }) async {
-    return _withTokenRetry((token) async {
-      final uri = Uri.parse('${isPcs ? _pcsBase : _panBase}$path').replace(
-        queryParameters: {...query, 'access_token': token},
-      );
-      final res = await _http
-          .post(uri, headers: _headers, body: form)
-          .timeout(const Duration(seconds: 30));
-      Log.d('baidu', 'POST $path -> ${res.statusCode}');
-      if (res.statusCode >= 400) {
-        throw DriveException.fromStatus(res.statusCode, context: path);
-      }
-      final decoded =
-          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-      _throwOnErrno(decoded, path);
-      return decoded;
-    });
-  }
-
-  /// 上传一个分片。状态同步文件很小，单片足够。
-  Future<Map<String, dynamic>> uploadSlice({
-    required String path,
-    required String uploadId,
-    required int partSeq,
-    required Uint8List bytes,
-  }) async {
-    return _withTokenRetry((token) async {
-      final uri = Uri.parse('$_pcsBase/pcs/superfile2').replace(
-        queryParameters: {
-          'method': 'upload',
-          'access_token': token,
-          'type': 'tmpfile',
-          'path': path,
-          'uploadid': uploadId,
-          'partseq': '$partSeq',
-        },
-      );
-      final request = http.MultipartRequest('POST', uri)
-        ..headers.addAll(_headers)
-        ..files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            bytes,
-            filename: 'chunk',
-          ),
-        );
-      final streamed =
-          await request.send().timeout(const Duration(seconds: 60));
-      final res = await http.Response.fromStream(streamed);
-      Log.d('baidu', 'UPLOAD slice $partSeq -> ${res.statusCode}');
-      if (res.statusCode >= 400) {
-        throw DriveException.fromStatus(res.statusCode, context: 'superfile2');
-      }
-      return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-    });
-  }
-
   /// 直接对 dlink 发起请求。必须带 UA，且 http 包默认会跟随 302
   /// 并在跳转后保留我们设置的 header（audio-playback 规格）。
   Future<http.StreamedResponse> openStream(

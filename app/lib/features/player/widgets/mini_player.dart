@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/providers.dart';
@@ -35,8 +38,10 @@ class MiniPlayer extends ConsumerWidget {
           children: [
             // 顶边一条细进度：不点开播放页也知道这一章听到哪了
             _ChapterProgress(snap: snap),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+            // 底部安全区放在条子里面，手势条下方也是播放条的底色
+            SafeArea(
+              top: false,
+              minimum: const EdgeInsets.fromLTRB(12, 6, 4, 6),
               child: Row(
                 children: [
                   SeriesCover(
@@ -74,7 +79,12 @@ class MiniPlayer extends ConsumerWidget {
                   IconButton(
                     tooltip: snap.playing ? l.playerPause : l.playerPlay,
                     icon: Icon(snap.playing ? Icons.pause : Icons.play_arrow),
-                    onPressed: snap.playing ? session.pause : session.play,
+                    onPressed: () {
+                      unawaited(HapticFeedback.selectionClick());
+                      unawaited(
+                        snap.playing ? session.pause() : session.play(),
+                      );
+                    },
                   ),
                   IconButton(
                     tooltip: l.playerNext(l.unit(series.kind)),

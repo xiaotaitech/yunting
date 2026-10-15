@@ -146,7 +146,7 @@ void main() {
   tearDown(() => dir.delete(recursive: true));
 
   for (final from in [1, 2]) {
-    group('v$from → v3', () {
+    group('v$from → v4', () {
       setUp(() => createLegacy(from));
 
       test('书、断点、手动排序标记原样保留，类型落成有声书', () async {
@@ -206,7 +206,13 @@ void main() {
       test('迁移后的列与全新建库完全一致', () async {
         await openAndClose();
         final migrated = {
-          for (final t in ['books', 'chapters', 'sync_meta', 'play_history'])
+          for (final t in [
+            'books',
+            'chapters',
+            'sync_meta',
+            'play_history',
+            'drive_cache',
+          ])
             t: columnsOf(t),
         };
         await File(dbPath).delete();
@@ -218,11 +224,11 @@ void main() {
     });
   }
 
-  test('user_version 升到 3', () async {
+  test('user_version 升到 4', () async {
     createLegacy(2);
     await openAndClose();
     final db = sqlite3.open(dbPath);
-    expect(db.userVersion, 3);
+    expect(db.userVersion, 4);
     db.close();
   });
 }

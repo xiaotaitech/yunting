@@ -2,19 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:yun_audiobook/features/history/history_drawer.dart';
 import 'package:yun_audiobook/features/player/widgets/mini_player.dart';
 import 'package:yun_audiobook/features/update/update_dialog.dart';
-import 'package:yun_audiobook/l10n/l10n.dart';
 
-/// 主界面外壳：底部三栏 + 迷你播放条。
+/// 外层 Scaffold：书架左上角的菜单键经它打开抽屉。
+final shellScaffoldKey = GlobalKey<ScaffoldState>(debugLabel: 'shell');
+
+/// 主界面外壳：左侧抽屉 + 底部迷你播放条（local-first-drawer-ui）。
 ///
-/// 一级入口只放常去的三处。离线管理是维护页（设配额、按书清缓存），
-/// 而下载动作本来就在详情页，所以它收在「我的」里。
+/// 参考 Claude App：没有底部导航，一级入口收进抽屉，最近收听像会话列表
+/// 一样常驻在那里。抽屉挂在外层，打开时连播放条一起盖住。
 class MainShell extends ConsumerStatefulWidget {
-  const MainShell({required this.shell, super.key});
+  const MainShell({required this.atRoot, required this.child, super.key});
 
-  final StatefulNavigationShell shell;
+  /// 是否在书架根页。只有这时才允许从左边缘滑出抽屉——
+  /// 其它页面的左边缘是系统返回手势。
+  final bool atRoot;
+  final Widget child;
 
   @override
   ConsumerState<MainShell> createState() => _MainShellState();
@@ -39,39 +44,11 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return Scaffold(
-      body: SafeArea(child: widget.shell),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const MiniPlayer(),
-          NavigationBar(
-            selectedIndex: widget.shell.currentIndex,
-            // 再点一次当前栏回到该栏的根页面
-            onDestinationSelected: (i) => widget.shell
-                .goBranch(i, initialLocation: i == widget.shell.currentIndex),
-            destinations: [
-              NavigationDestination(
-                icon: const Icon(Icons.menu_book_outlined),
-                selectedIcon: const Icon(Icons.menu_book),
-                label: l.navShelf,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.history_outlined),
-                selectedIcon: const Icon(Icons.history),
-                label: l.navHistory,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.person_outline),
-                selectedIcon: const Icon(Icons.person),
-                label: l.navMine,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+        key: shellScaffoldKey,
+        drawer: const HistoryDrawer(),
+        drawerEnableOpenDragGesture: widget.atRoot,
+        body: SafeArea(bottom: false, child: widget.child),
+        bottomNavigationBar: const MiniPlayer(),
+      );
 }

@@ -8,8 +8,7 @@ import 'package:yun_audiobook/domain/local_media.dart';
 
 part 'library_controller.g.dart';
 
-/// 书架变更的唯一入口。每个改动之后都标记待同步——
-/// 原来 `markDirty` 散落在界面里手动调，漏一处就少同步一次。
+/// 书架变更的唯一入口。
 /// keepAlive：这是无状态的命令入口，没有人 watch 它。自动释放的话，
 /// 方法里第一个 await 之后 provider 就已被回收，再 ref.read 会直接抛错
 /// （真机上「加入书架」就这样静默失败过）。
@@ -46,7 +45,6 @@ class LibraryController extends _$LibraryController {
     final series = await ref
         .read(libraryRepositoryProvider)
         .claimFolder(folderPath, titleOverride: title);
-    ref.read(librarySyncProvider).markDirty();
     // 封面在后台找：加完书先用首字占位，取到后书架自动换上（库变了界面就刷新）
     unawaited(ref.read(coverServiceProvider).ensure(series));
     return series;
@@ -68,19 +66,16 @@ class LibraryController extends _$LibraryController {
     await ref
         .read(libraryRepositoryProvider)
         .edit(series, title: title, author: author);
-    ref.read(librarySyncProvider).markDirty();
   }
 
   Future<void> reorder(Series series, List<Episode> ordered) async {
     await ref.read(libraryRepositoryProvider).reorder(series, ordered);
-    ref.read(librarySyncProvider).markDirty();
   }
 
   /// 移出书架：连同离线缓存一起清掉，网盘原文件一个字节不动。
   Future<void> remove(Series series) async {
     await ref.read(downloadManagerProvider).clearSeriesCache(series.id);
     await ref.read(libraryRepositoryProvider).remove(series.id);
-    ref.read(librarySyncProvider).markDirty();
   }
 
   /// 课程视频走转码流，没有可离线的文件（add-video-courses「课程不提供离线」），只下音频；
@@ -101,7 +96,6 @@ class LibraryController extends _$LibraryController {
     for (final s in list) {
       await repo.remove(s.id);
     }
-    ref.read(librarySyncProvider).markDirty();
     _pendingCacheClear.addAll(ids);
     _cacheTimer?.cancel();
     _cacheTimer = Timer(undoWindow, flushPendingCacheClear);
@@ -114,7 +108,6 @@ class LibraryController extends _$LibraryController {
     for (final s in list) {
       await repo.restore(s);
     }
-    ref.read(librarySyncProvider).markDirty();
   }
 
   /// 撤销窗口到期时清缓存。测试里直接调用，不必真等 6 秒。

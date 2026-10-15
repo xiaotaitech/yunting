@@ -55,14 +55,14 @@ class BrowsePage extends ConsumerWidget {
   }
 }
 
-class _Listing extends StatelessWidget {
+class _Listing extends ConsumerWidget {
   const _Listing({required this.path, required this.entries});
 
   final String path;
   final List<DriveEntry> entries;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final audio = entries.where(isMediaEntry).toList();
     final subFolderCount = entries.where((e) => e.isDirectory).length;
 
@@ -76,12 +76,24 @@ class _Listing extends StatelessWidget {
         Expanded(
           child: entries.isEmpty
               ? const _EmptyFolder()
-              : ListView.builder(
-                  itemCount: entries.length,
-                  itemBuilder: (_, i) => DriveEntryTile(
-                    entry: entries[i],
-                    onOpenFolder: () =>
-                        context.push(Routes.browse(entries[i].path)),
+              // 列表先出自本地缓存，下拉向网盘要最新的
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final failed = context.l10n.cacheRefreshFailed;
+                    final ok =
+                        await ref.read(browseProvider(path).notifier).refresh();
+                    if (!ok) {
+                      messenger.showSnackBar(SnackBar(content: Text(failed)));
+                    }
+                  },
+                  child: ListView.builder(
+                    itemCount: entries.length,
+                    itemBuilder: (_, i) => DriveEntryTile(
+                      entry: entries[i],
+                      onOpenFolder: () =>
+                          context.push(Routes.browse(entries[i].path)),
+                    ),
                   ),
                 ),
         ),

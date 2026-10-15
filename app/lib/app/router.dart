@@ -11,7 +11,6 @@ import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/features/account/login_page.dart';
 import 'package:yun_audiobook/features/account/mine_page.dart';
 import 'package:yun_audiobook/features/help/help_page.dart';
-import 'package:yun_audiobook/features/history/history_page.dart';
 import 'package:yun_audiobook/features/library/add_series_page.dart';
 import 'package:yun_audiobook/features/library/browse_page.dart';
 import 'package:yun_audiobook/features/library/series_detail_page.dart';
@@ -25,9 +24,7 @@ final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 /// 应用路由（refactor-app-foundation D1）。
 ///
-/// 底部三栏用 StatefulShellRoute.indexedStack：三个分支常驻，切栏不重建，
-/// 书架、历史的滚动位置不丢（原来 IndexedStack 的行为）。
-/// 播放页与帮助挂在根导航器上，盖住底栏与迷你播放条。
+/// 播放页与帮助挂在根导航器上，盖住迷你播放条。
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final auth = ref.watch(authRepositoryProvider);
@@ -67,53 +64,40 @@ GoRouter router(Ref ref) {
         builder: (_, state) =>
             HelpPage(section: state.uri.queryParameters['section']),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (_, __, shell) => MainShell(shell: shell),
-        branches: [
-          StatefulShellBranch(
+      // 主屏只有书架一个根页面，其它页面压在它上面（local-first-drawer-ui）。
+      // ShellRoute 只为让迷你播放条与抽屉盖在这些页面外面。
+      ShellRoute(
+        builder: (_, state, child) =>
+            MainShell(atRoot: state.uri.path == Routes.shelf, child: child),
+        routes: [
+          GoRoute(
+            path: Routes.shelf,
+            builder: (_, __) => const ShelfPage(),
             routes: [
               GoRoute(
-                path: Routes.shelf,
-                builder: (_, __) => const ShelfPage(),
-                routes: [
-                  GoRoute(
-                    path: 'series/:id',
-                    builder: (_, state) =>
-                        SeriesDetailPage(seriesId: state.pathParameters['id']!),
-                  ),
-                  GoRoute(
-                    path: 'add',
-                    builder: (_, __) => const AddSeriesPage(),
-                  ),
-                  GoRoute(
-                    path: 'browse',
-                    builder: (_, state) => BrowsePage(
-                      path: state.uri.queryParameters['path'] ?? '/',
-                    ),
-                  ),
-                ],
+                path: 'series/:id',
+                builder: (_, state) =>
+                    SeriesDetailPage(seriesId: state.pathParameters['id']!),
+              ),
+              GoRoute(
+                path: 'add',
+                builder: (_, __) => const AddSeriesPage(),
+              ),
+              GoRoute(
+                path: 'browse',
+                builder: (_, state) => BrowsePage(
+                  path: state.uri.queryParameters['path'] ?? '/',
+                ),
               ),
             ],
           ),
-          StatefulShellBranch(
+          GoRoute(
+            path: Routes.mine,
+            builder: (_, __) => const MinePage(),
             routes: [
               GoRoute(
-                path: Routes.history,
-                builder: (_, __) => const HistoryPage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.mine,
-                builder: (_, __) => const MinePage(),
-                routes: [
-                  GoRoute(
-                    path: 'offline',
-                    builder: (_, __) => const OfflinePage(),
-                  ),
-                ],
+                path: 'offline',
+                builder: (_, __) => const OfflinePage(),
               ),
             ],
           ),

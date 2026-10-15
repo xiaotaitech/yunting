@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/providers.dart';
@@ -11,6 +14,7 @@ import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/common/widgets/empty_state.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
+import 'package:yun_audiobook/features/library/search_history_controller.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
 /// 添加书籍：直接列出网盘里所有装着音频的文件夹，可按关键字筛选。
@@ -39,6 +43,17 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
     ref
       ..invalidate(localMediaPermissionProvider(_kind))
       ..invalidate(localMediaFoldersProvider(_kind));
+  }
+
+  /// 网盘栏先出本地缓存，下拉才等网盘的最新结果；本机栏直接重查。
+  Future<void> _refresh() async {
+    if (_device) {
+      return ref.refresh(localMediaFoldersProvider(_kind).future).then((_) {});
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = context.l10n.cacheRefreshFailed;
+    final ok = await ref.read(mediaFoldersProvider(_kind).notifier).refresh();
+    if (!ok) messenger.showSnackBar(SnackBar(content: Text(failed)));
   }
 
   @override
@@ -121,6 +136,8 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
                   leading: const Icon(Icons.search),
                   elevation: const WidgetStatePropertyAll(0),
                   onChanged: (_) => setState(() {}),
+                  onSubmitted: (q) =>
+                      ref.read(searchHistoryControllerProvider.notifier).add(q),
                   trailing: [
                     if (_query.text.isNotEmpty)
                       IconButton(
@@ -135,48 +152,119 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
           ),
         ),
       ),
-      body: !granted
-          ? EmptyState(
-              icon: Icons.lock_open_outlined,
-              title: l.addDevicePermissionTitle,
-              description: _kind == MediaKind.video
-                  ? l.addDevicePermissionVideo
-                  : l.addDevicePermissionAudio,
-              action: FilledButton(onPressed: _grant, child: Text(l.addGrant)),
-            )
-          : folders.when(
-              // 刷新时保留旧列表，不要整页闪成转圈
-              skipLoadingOnRefresh: true,
-              loading: () => _Scanning(
-                label: _kind == MediaKind.video
-                    ? l.addScanningCourses
-                    : l.addScanning,
-              ),
-              error: (e, _) => EmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: l.addScanFailed,
-                description: l.anyError(e),
-                action: FilledButton(
-                  onPressed: () => ref.invalidate(
-                    _device
-                        ? localMediaFoldersProvider(_kind)
-                        : mediaFoldersProvider(_kind),
-                  ),
-                  child: Text(l.actionRetry),
+      body: Column(
+        children: [
+          if (_query.text.isEmpty)
+            _RecentSearches(
+              onPick: (q) => setState(() {
+                _query
+                  ..text = q
+                  ..selection = TextSelection.collapsed(offset: q.length);
+              }),
+            ),
+          Expanded(child: _body(context, folders, granted)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    AsyncValue<List<MediaFolder>> folders,
+    bool granted,
+  ) {
+    final l = context.l10n;
+    return !granted
+        ? EmptyState(
+            icon: Icons.lock_open_outlined,
+            title: l.addDevicePermissionTitle,
+            description: _kind == MediaKind.video
+                ? l.addDevicePermissionVideo
+                : l.addDevicePermissionAudio,
+            action: FilledButton(onPressed: _grant, child: Text(l.addGrant)),
+          )
+        : folders.when(
+            // 刷新时保留旧列表，不要整页闪成转圈
+            skipLoadingOnRefresh: true,
+            loading: () => _Scanning(
+              label: _kind == MediaKind.video
+                  ? l.addScanningCourses
+                  : l.addScanning,
+            ),
+            error: (e, _) => EmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: l.addScanFailed,
+              description: l.anyError(e),
+              action: FilledButton(
+                onPressed: () => ref.invalidate(
+                  _device
+                      ? localMediaFoldersProvider(_kind)
+                      : mediaFoldersProvider(_kind),
                 ),
-              ),
-              data: (all) => RefreshIndicator(
-                onRefresh: () => _device
-                    ? ref.refresh(localMediaFoldersProvider(_kind).future)
-                    : ref.refresh(mediaFoldersProvider(_kind).future),
-                child: _FolderList(
-                  kind: _kind,
-                  all: all,
-                  visible: filterFolders(all, _query.text),
-                  query: _query.text,
-                ),
+                child: Text(l.actionRetry),
               ),
             ),
+            data: (all) => RefreshIndicator(
+              onRefresh: _refresh,
+              child: _FolderList(
+                kind: _kind,
+                all: all,
+                visible: filterFolders(all, _query.text),
+                query: _query.text,
+              ),
+            ),
+          );
+  }
+}
+
+/// 搜索框为空时显示的最近搜索：点一下按它筛选，可单条删、可清空。
+class _RecentSearches extends ConsumerWidget {
+  const _RecentSearches({required this.onPick});
+
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final history = ref.watch(searchHistoryProvider).value ?? const [];
+    if (history.isEmpty) return const SizedBox.shrink();
+    final controller = ref.read(searchHistoryControllerProvider.notifier);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.addRecentSearches,
+                  style: theme.textTheme.labelMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              TextButton(
+                onPressed: controller.clear,
+                child: Text(l.addClearSearches),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final q in history)
+                InputChip(
+                  label: Text(q),
+                  onPressed: () => onPick(q),
+                  onDeleted: () => controller.remove(q),
+                  deleteButtonTooltipMessage: l.addSearchClear,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -258,6 +346,9 @@ class _FolderList extends ConsumerWidget {
           folder: f,
           kind: kind,
           onShelf: onShelf.contains(f.path),
+          // 搜出来并用上了，才算一次有用的搜索
+          onUsed: () =>
+              ref.read(searchHistoryControllerProvider.notifier).add(query),
         );
       },
     );
@@ -269,11 +360,13 @@ class _FolderTile extends ConsumerStatefulWidget {
     required this.folder,
     required this.kind,
     required this.onShelf,
+    required this.onUsed,
   });
 
   final MediaFolder folder;
   final MediaKind kind;
   final bool onShelf;
+  final VoidCallback onUsed;
 
   @override
   ConsumerState<_FolderTile> createState() => _FolderTileState();
@@ -287,11 +380,13 @@ class _FolderTileState extends ConsumerState<_FolderTile> {
   Future<void> _add() async {
     final l = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
+    widget.onUsed();
     setState(() => _busy = true);
     try {
       final s = await ref
           .read(libraryControllerProvider.notifier)
           .claim(widget.folder.path);
+      unawaited(HapticFeedback.lightImpact());
       messenger.showSnackBar(
         SnackBar(
           content: Text(l.browseAdded(s.title, s.episodeCount, l.unit(s.kind))),
@@ -325,7 +420,10 @@ class _FolderTileState extends ConsumerState<_FolderTile> {
       ),
       isThreeLine: true,
       // 点行进入该文件夹预览（可看到全部文件、决定要不要加）
-      onTap: () => context.push(Routes.browse(f.path)),
+      onTap: () {
+        widget.onUsed();
+        unawaited(context.push<void>(Routes.browse(f.path)));
+      },
       trailing: widget.onShelf
           ? Text(
               l.addOnShelf,

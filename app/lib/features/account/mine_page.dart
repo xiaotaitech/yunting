@@ -12,12 +12,11 @@ import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/help/help_page.dart';
 import 'package:yun_audiobook/features/player/playback_settings_controller.dart';
-import 'package:yun_audiobook/features/shelf/sync_controller.dart';
 import 'package:yun_audiobook/features/update/app_installer.dart';
 import 'package:yun_audiobook/features/update/update_dialog.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
-/// 「我的」（app-layout 规格）：原来的设置页平铺了播放开关、离线、同步、
+/// 「我的」（app-layout 规格）：原来的设置页平铺了播放开关、离线、
 /// 隐私说明、诊断信息和退出登录，没有层次。现在按「收听 / 播放 / 关于 / 账号」分组。
 /// 隐私承诺挪进了帮助的「隐私」一节，这里留一个入口。
 class MinePage extends ConsumerWidget {
@@ -38,7 +37,6 @@ class MinePage extends ConsumerWidget {
               _Group(l.mineGroupListen),
               // 用量直接显示在副标题上，不用点进去就能知道占了多少
               const _OfflineEntry(),
-              const _SyncTile(),
               _Group(l.mineGroupPlayback),
               const _ResumeSwitch(),
               const _VideoQualityTile(),
@@ -110,39 +108,6 @@ class _Entry extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       );
-}
-
-class _SyncTile extends ConsumerWidget {
-  const _SyncTile();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = context.l10n;
-    final lastSync = ref.watch(lastSyncAtProvider).value;
-    final syncing = ref.watch(syncControllerProvider);
-
-    return ListTile(
-      leading: const Icon(Icons.sync),
-      title: Text(l.mineSyncNow),
-      subtitle: Text(
-        lastSync == null
-            ? l.mineNeverSynced(AppConfig.syncDir)
-            : l.mineLastSync(formatSyncTime(l, lastSync)),
-      ),
-      onTap: syncing
-          ? null
-          : () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final ok =
-                  await ref.read(syncControllerProvider.notifier).syncNow();
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(ok ? l.mineSyncDone : l.mineSyncFailed),
-                ),
-              );
-            },
-    );
-  }
 }
 
 /// 视频清晰度：720p（默认）/ 480p。只影响之后打开的视频。

@@ -21,6 +21,9 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
   /// 自动提示过的最新版本：同一版本只自动提示一次。
   static const updateSeenKey = 'update_seen';
 
+  /// 「添加书籍」的搜索历史，JSON 字符串数组，最近在前。
+  static const searchHistoryKey = 'search_history';
+
   Future<String?> read(String key) async =>
       (await (select(syncMeta)..where((m) => m.key.equals(key)))
               .getSingleOrNull())

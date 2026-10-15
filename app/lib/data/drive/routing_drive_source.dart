@@ -52,12 +52,4 @@ class RoutingDriveSource implements CloudDriveSource {
   @override
   Future<Stream<List<int>>> openStream(ResolvedMedia media, {int start = 0}) =>
       remote.openStream(media, start: start);
-
-  @override
-  Future<String?> readAppStateFile(String path) =>
-      remote.readAppStateFile(path);
-
-  @override
-  Future<void> writeAppStateFile(String path, String content) =>
-      remote.writeAppStateFile(path, content);
 }

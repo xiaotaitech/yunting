@@ -6,8 +6,7 @@ part 'history_dao.g.dart';
 
 /// 播放历史的读写（play-history）。
 ///
-/// 只存本机：历史条目多、增长快，塞进同步用的 library.json 会让那个文件
-/// 一直变大；而且「这台设备上听过什么」本来就是本地语义。
+/// 只存本机：「这台设备上听过什么」本来就是本地语义。
 @DriftAccessor(tables: [Books, Chapters, PlayHistory])
 class HistoryDao extends DatabaseAccessor<AppDatabase> with _$HistoryDaoMixin {
   HistoryDao(super.attachedDatabase);

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yun_audiobook/app/main_shell.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/domain/entities.dart';
@@ -10,7 +14,6 @@ import 'package:yun_audiobook/features/shelf/widgets/continue_card.dart';
 import 'package:yun_audiobook/features/shelf/widgets/empty_shelf.dart';
 import 'package:yun_audiobook/features/shelf/widgets/shelf_error_view.dart';
 import 'package:yun_audiobook/features/shelf/widgets/shelf_tile.dart';
-import 'package:yun_audiobook/features/shelf/widgets/sync_button.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
 /// 书架（library-catalog 规格「书架管理」）。
@@ -31,6 +34,7 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
   final Set<String> _selected = {};
 
   void _enter([String? firstId]) => setState(() {
+        if (firstId != null) unawaited(HapticFeedback.mediumImpact());
         _managing = true;
         if (firstId != null) _selected.add(firstId);
       });
@@ -119,7 +123,13 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
                   ),
                 ],
               )
+            // 参考 Claude App：左上角菜单打开抽屉，右上角是「新建」
             : AppBar(
+                leading: IconButton(
+                  tooltip: l.drawerOpen,
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => shellScaffoldKey.currentState?.openDrawer(),
+                ),
                 title: Text(l.navShelf),
                 actions: [
                   if (list.isNotEmpty)
@@ -128,15 +138,12 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
                       icon: const Icon(Icons.checklist),
                       onPressed: _enter,
                     ),
-                  const SyncButton(),
+                  IconButton(
+                    tooltip: l.shelfAdd,
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () => context.push(Routes.addSeries),
+                  ),
                 ],
-              ),
-        floatingActionButton: _managing
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () => context.push(Routes.addSeries),
-                icon: const Icon(Icons.add),
-                label: Text(l.shelfAdd),
               ),
         bottomNavigationBar: _managing
             ? SafeArea(
@@ -168,11 +175,11 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
                   // 下拉的圈一闪就没了，看不出刷没刷
                   onRefresh: () => ref.refresh(shelfProvider.future),
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
                       for (final series in list)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(bottom: 10),
                           child: ShelfTile(
                             series: series,
                             selecting: _managing,

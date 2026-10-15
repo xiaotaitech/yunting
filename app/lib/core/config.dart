@@ -16,11 +16,6 @@ class AppConfig {
   /// 顺带证明了那层抽象确实是可替换的。
   static const bool demoMode = bool.fromEnvironment('DEMO_MODE');
 
-  /// 网盘中存放同步状态的应用专属目录（design.md D5）。
-  static const String appFolderName = 'yun_audiobook';
-  static String get syncDir => '/apps/$appFolderName';
-  static String get syncFilePath => '$syncDir/library.json';
-
   /// 百度对 dlink 的强制要求：请求必须带这个 User-Agent，
   /// 且 302 跳转之后仍要保留（audio-playback 规格）。
   static const String panUserAgent = 'pan.baidu.com';
