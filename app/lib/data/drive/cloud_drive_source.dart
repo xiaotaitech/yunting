@@ -74,6 +74,7 @@ class ResolvedMedia {
     this.kind = StreamKind.progressive,
     this.mediaKind = MediaKind.audio,
     this.headers = const {},
+    this.sourceId,
   });
 
   final String url;
@@ -85,11 +86,26 @@ class ResolvedMedia {
   final MediaKind mediaKind;
   final Map<String, String> headers;
 
+  /// 出自哪个数据源（[CloudDriveSource.id]）。由 RoutingDriveSource 填上，
+  /// 下载时按它把 openStream 交回同一个源。
+  final String? sourceId;
+
   bool get isStale => !isLocal && DateTime.now().isAfter(expiresAt);
+
+  ResolvedMedia from(String source) => ResolvedMedia(
+        url: url,
+        isLocal: isLocal,
+        expiresAt: expiresAt,
+        kind: kind,
+        mediaKind: mediaKind,
+        headers: headers,
+        sourceId: source,
+      );
 }
 
 abstract class CloudDriveSource {
-  /// 数据源标识，用于日志与将来的多网盘区分。
+  /// 数据源标识（'baidu'、'local'…），各源唯一。接入的新网盘同时以
+  /// `<id>:` 作为路径与 fsId 前缀，见 RoutingDriveSource。
   String get id;
 
   /// 列出目录内容。只允许访问当前授权用户本人的文件。

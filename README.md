@@ -186,7 +186,8 @@ flutter build apk --release \
 
 ## App 里怎么用
 
-1. **授权**：点「授权百度网盘」→ 浏览器里输入用户码 → 自动返回
+1. **登录**：点「登录百度网盘」→ App 内的百度页面里登录并授权 → 自动进书架
+   （备用：「改用浏览器或其他设备授权」走设备码）
 2. **加书**：书架右上角「＋」→ 列出网盘里所有装着音频的文件夹（可搜索，也可按目录找）
    → 点「＋」加入书架。网盘目录与搜索词记在本机，二次打开不用等
 3. **听**：点书 → 点任意章节开播；或在书架直接点「继续收听」从断点接上
@@ -304,6 +305,21 @@ app/lib/
 ```
 
 界面只经 `features/*/…_controller.dart` 改状态；读数据用 `app/providers.dart` 里的 watch 流，库一变界面自动刷新。
+
+### 接入其他网盘
+
+目前只实现了百度网盘，但留好了三个接入点（prepare-multi-drive），接一家新网盘（以阿里云盘为例）按下面做：
+
+1. **数据源**：在 `data/drive/<网盘>/` 实现 `CloudDriveSource`，`id` 取 `aliyun`，
+   产出的路径与 fsId 一律带 `aliyun:` 前缀（无前缀的路径永远归百度——老用户库里的数据都没有前缀）。
+2. **分派**：`app/app_services.dart` 里 `RoutingDriveSource(byPrefix: {...})` 加一项 `'aliyun:': AliyunDriveSource(...)`。
+   书架、认领、播放、离线下载自动按前缀走到它；解析出的播放地址带 `sourceId`，下载取流会交回同一个源。
+3. **登录**：实现 `WebOAuthLogin`（`data/auth/web_oauth_login.dart`）：授权页地址、回跳识别、code 换令牌。
+   AppSecret 照例放 OAuth 代理（`tools/src/worker.mjs` 加对应端点），令牌存储用独立的键，别和百度的混在一起。
+   App 内登录页 `WebLoginPage` 直接复用，不用再写 WebView。
+4. **入口**：登录页加一个「登录阿里云盘」按钮；「添加书籍」加一个来源分段（现在的整盘扫描 `listMediaFiles` 只走百度）。
+
+新网盘的书与百度、本机的书存在同一张表里，靠前缀区分，不需要改库表。
 
 规格与任务清单：
 

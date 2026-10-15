@@ -13,6 +13,7 @@ import 'package:yun_audiobook/data/drive/routing_drive_source.dart';
 import 'package:yun_audiobook/data/local/database.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
 import 'package:yun_audiobook/data/repositories/library_repository.dart';
+import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/download/download_manager.dart';
 import 'package:yun_audiobook/playback/audio_service_bridge.dart';
 import 'package:yun_audiobook/playback/composite_engine.dart';
@@ -80,7 +81,11 @@ class AppServices {
                 SettingsDao.videoQualityDefault,
           );
     // 网盘与本机合成一个数据源：书架、播放各层不用区分来源（add-local-media）
-    final drive = RoutingDriveSource(remote: remote, local: local);
+    // 将来接入的网盘在 byPrefix 里各登记一个前缀即可（README「接入其他网盘」）
+    final drive = RoutingDriveSource(
+      primary: remote,
+      byPrefix: {localPrefix: local},
+    );
 
     final library = LibraryRepository(
       drive: drive,

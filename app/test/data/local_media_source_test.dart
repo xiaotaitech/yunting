@@ -79,7 +79,10 @@ void main() {
         DatabaseConnection(NativeDatabase.memory(),
             closeStreamsSynchronously: true),
       );
-      drive = RoutingDriveSource(remote: DemoDriveSource(), local: fakeLocal());
+      drive = RoutingDriveSource(
+        primary: DemoDriveSource(),
+        byPrefix: {localPrefix: fakeLocal()},
+      );
       library = LibraryRepository(
         drive: drive,
         dao: db.seriesDao,

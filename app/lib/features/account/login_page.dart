@@ -5,14 +5,18 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/data/auth/auth_repository.dart';
+import 'package:yun_audiobook/features/account/web_login_page.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/widgets/brand_mark.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
-/// 设备码授权页。
+/// 登录页（in-app-baidu-login）。
 ///
-/// 选设备码而不是网页回调，是因为它不需要备案域名和回调地址配置，
-/// 对个人开发者和本地联调都最省事。
+/// 主路径是 App 内登录：百度授权页在 WebView 里打开，登录、授权、回到 App
+/// 一气呵成，不用切到浏览器、也不用抄用户码。授权码模式用 redirect_uri=oob，
+/// 同样不需要备案域名和回调地址配置。
+/// 设备码授权留作备用：WebView 里登录不上（验证码异常等）时，改在浏览器
+/// 或另一台设备上授权。
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -25,6 +29,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _busy = false;
   String? _error;
 
+  /// App 内登录：打开授权页 → 拿回 code → 经代理换令牌。
+  /// 成功后 router 的 redirect 会把本页换成书架。
+  Future<void> _signInInApp() async {
+    final l = context.l10n;
+    final auth = ref.read(authRepositoryProvider);
+    setState(() {
+      _busy = true;
+      _error = null;
+      _session = null;
+    });
+    try {
+      final url = await auth.authorizeUrl();
+      if (!mounted) return;
+      final result = await WebLoginPage.open(
+        context,
+        login: auth,
+        authorizeUrl: url,
+        title: l.loginWebTitle,
+      );
+      switch (result) {
+        case null:
+          break; // 用户关掉了登录页，什么都不用说
+        case OAuthDenied():
+          if (mounted) setState(() => _error = l.loginDenied);
+        case OAuthCode(:final code):
+          await auth.exchangeCode(code);
+      }
+    } on DriveException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = l.anyError(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// 设备码授权（备用）：在浏览器或另一台设备上输入用户码。
   Future<void> _start() async {
     final l = context.l10n;
     // 授权一成功，router 的 redirect 就会把本页换掉（State 随之 dispose，
@@ -108,9 +149,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 16),
               ],
               FilledButton.icon(
-                onPressed: _busy ? null : _start,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                onPressed: _busy ? null : _signInInApp,
                 icon: const Icon(Icons.cloud_outlined),
                 label: Text(_busy ? l.loginBusy : l.loginAuthorize),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: _busy ? null : _start,
+                child: Text(l.loginOtherDevice),
               ),
               const SizedBox(height: 16),
               Text(

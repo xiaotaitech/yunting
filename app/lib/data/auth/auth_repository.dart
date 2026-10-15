@@ -7,6 +7,9 @@ import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/core/logging.dart';
 import 'package:yun_audiobook/data/auth/token_store.dart';
+import 'package:yun_audiobook/data/auth/web_oauth_login.dart';
+
+export 'package:yun_audiobook/data/auth/web_oauth_login.dart';
 
 /// 设备码授权的进行中状态。设备码流程不需要回调域名，
 /// 是移动端与本地联调最省事的路径。
@@ -30,9 +33,22 @@ class DeviceAuthSession {
 
 enum AuthState { unknown, signedOut, signedIn }
 
+/// 百度的回跳地址：redirect_uri=oob 时授权完成跳到这个固定地址，
+/// code 或 error 带在查询串里。
+OAuthCallback? parseBaiduCallback(Uri url) {
+  if (url.host != 'openapi.baidu.com' ||
+      url.path != '/oauth/2.0/login_success') {
+    return null;
+  }
+  final q = url.queryParameters;
+  final code = q['code'];
+  if (code != null && code.isNotEmpty) return OAuthCode(code);
+  return OAuthDenied(q['error_description'] ?? q['error'] ?? '');
+}
+
 /// 授权仓库。所有涉及 AppSecret 的动作都交给 OAuth 代理完成，
 /// 客户端只持有 AppKey（design.md D2）。
-class AuthRepository {
+class AuthRepository implements WebOAuthLogin {
   AuthRepository({TokenStore? store, http.Client? client, String? proxyBase})
       : _store = store ?? TokenStore(),
         _http = client ?? http.Client(),
@@ -125,6 +141,37 @@ class AuthRepository {
     return merged;
   }
 
+  // ---------------------------------------------------------- App 内授权
+
+  /// 百度授权页地址（授权码模式，redirect_uri=oob，手机版页面）。
+  /// 由代理拼出来：客户端不必知道 scope 等细节，换 AppKey 也只改代理。
+  @override
+  Future<Uri> authorizeUrl() async {
+    final res = await _get('/oauth/authorize-url');
+    return Uri.parse(res['url'] as String);
+  }
+
+  @override
+  OAuthCallback? parseCallback(Uri url) => parseBaiduCallback(url);
+
+  /// 用授权页回跳带回的 code 换令牌（AppSecret 只在代理那边）。
+  @override
+  Future<AuthToken> exchangeCode(String code) async {
+    final res = await _post('/oauth/exchange', {'code': code});
+    if (res == null) {
+      throw const DriveException(DriveErrorKind.authInvalid, '授权码无效或已过期，请重新登录');
+    }
+    return _signedIn(AuthToken.fromResponse(res));
+  }
+
+  Future<AuthToken> _signedIn(AuthToken token) async {
+    _cached = token;
+    await _store.write(token);
+    _emit(AuthState.signedIn);
+    Log.d('auth', '授权成功 scope=${token.scope}');
+    return token;
+  }
+
   // ---------------------------------------------------------- 设备码授权
 
   Future<DeviceAuthSession> startDeviceAuth() async {
@@ -158,12 +205,7 @@ class AuthRepository {
       if (res == null) continue;
       switch (res['status'] as String?) {
         case 'ok':
-          final token = AuthToken.fromResponse(res);
-          _cached = token;
-          await _store.write(token);
-          _emit(AuthState.signedIn);
-          Log.d('auth', '授权成功 scope=${token.scope}');
-          return token;
+          return _signedIn(AuthToken.fromResponse(res));
         case 'slow_down':
           interval += const Duration(seconds: 2);
         case 'denied':
@@ -187,21 +229,40 @@ class AuthRepository {
     Log.d('auth', '已退出登录（本地数据${keepLocalData ? '保留' : '清除'}）');
   }
 
+  Future<Map<String, dynamic>> _get(String path) async {
+    final res = await _send('GET', path, () => _http.get(_proxy(path)));
+    if (res == null) {
+      throw DriveException(DriveErrorKind.api, 'OAuth 代理拒绝了 $path');
+    }
+    return res;
+  }
+
   Future<Map<String, dynamic>?> _post(
-      String path, Map<String, dynamic> body) async {
+    String path,
+    Map<String, dynamic> body,
+  ) =>
+      _send(
+        'POST',
+        path,
+        () => _http.post(
+          _proxy(path),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        ),
+      );
+
+  Future<Map<String, dynamic>?> _send(
+    String method,
+    String path,
+    Future<http.Response> Function() request,
+  ) async {
     if (_proxyBase.isEmpty) {
       throw const DriveException(DriveErrorKind.api, 'OAuth 代理地址未配置');
     }
     try {
-      final res = await _http
-          .post(
-            _proxy(path),
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 20));
+      final res = await request().timeout(const Duration(seconds: 20));
       // 只记录路径与状态码，绝不记录响应体（含令牌）。
-      Log.d('auth', 'POST $path -> ${res.statusCode}');
+      Log.d('auth', '$method $path -> ${res.statusCode}');
       if (res.statusCode == 401) return null;
       if (res.statusCode >= 400) {
         // 代理会把百度的失败原因放在 message 里（例如 AppKey 配错时的

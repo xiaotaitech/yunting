@@ -418,7 +418,7 @@
   "loginCopyCode": "复制用户码",
   "loginWaiting": "等待授权中…",
   "loginBusy": "授权进行中…",
-  "loginAuthorize": "授权百度网盘",
+  "loginAuthorize": "登录百度网盘",
   "loginPrivacy": "本应用只读取你本人网盘中的文件，不会上传音频，也不提供任何分享或他人资源访问功能。",
   "setupTitle": "需要先完成配置",
   "setupMissing": "尚未注入百度网盘 AppKey 与 OAuth 代理地址，应用无法访问网盘。",
@@ -667,5 +667,17 @@
   "addRecentSearches": "最近搜索",
   "addClearSearches": "清空",
   "drawerRecent": "最近收听",
-  "drawerOpen": "打开菜单"
+  "drawerOpen": "打开菜单",
+  "loginOtherDevice": "改用浏览器或其他设备授权",
+  "loginWebTitle": "登录百度网盘",
+  "loginDenied": "你取消了授权，可以重新登录",
+  "loginWebFailed": "登录页打不开",
+  "loginWebFailedHint": "{reason}\n\n检查网络后重试；仍然不行的话，关闭此页，改用「浏览器或其他设备授权」。",
+  "@loginWebFailedHint": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }
