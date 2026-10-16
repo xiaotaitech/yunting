@@ -1,13 +1,9 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/main_shell.dart';
-import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/app/routes.dart';
-import 'package:yun_audiobook/core/config.dart';
-import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/features/account/login_page.dart';
 import 'package:yun_audiobook/features/account/mine_page.dart';
 import 'package:yun_audiobook/features/help/help_page.dart';
@@ -27,28 +23,12 @@ final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 /// 播放页与帮助挂在根导航器上，盖住迷你播放条。
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
-  final auth = ref.watch(authRepositoryProvider);
-  final authChanges = _StreamListenable(auth.stateChanges);
-  ref.onDispose(authChanges.dispose);
-
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: Routes.shelf,
-    refreshListenable: authChanges,
-    redirect: (context, state) {
-      // 演示模式没有百度账号可授权，直接进主界面
-      if (AppConfig.demoMode) return null;
-      final atLogin = state.matchedLocation == Routes.login;
-      // 帮助页登录前也要能看（授权遇到问题时就是去那里找答案）
-      if (state.matchedLocation.startsWith('/help')) return null;
-      return switch (auth.currentState) {
-        AuthState.signedIn => atLogin ? Routes.shelf : null,
-        AuthState.signedOut => atLogin ? null : Routes.login,
-        // bootstrap 已经 restore 过，unknown 只在极短的窗口里出现
-        AuthState.unknown => null,
-      };
-    },
     routes: [
+      // 本地优先：没登录也能用本地书架，登录页只在要用网盘时按需打开，
+      // 登录成功后自己关掉（见 LoginPage）。
       GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
       GoRoute(
         path: Routes.player,
@@ -105,19 +85,4 @@ GoRouter router(Ref ref) {
       ),
     ],
   );
-}
-
-/// 把授权状态流适配成 go_router 要的 Listenable，状态一变就重新跑 redirect。
-class _StreamListenable extends ChangeNotifier {
-  _StreamListenable(Stream<Object?> stream) {
-    _sub = stream.listen((_) => notifyListeners());
-  }
-
-  late final StreamSubscription<Object?> _sub;
-
-  @override
-  void dispose() {
-    unawaited(_sub.cancel());
-    super.dispose();
-  }
 }

@@ -6,6 +6,7 @@
   "actionCancel": "取消",
   "actionConfirm": "确定",
   "actionRetry": "重试",
+  "actionSignIn": "登录",
   "actionDelete": "删除",
   "splashLoading": "正在准备…",
   "bootstrapFailed": "启动失败：{detail}",
@@ -345,6 +346,8 @@
   "mineSignOutSubtitle": "本地书架与收听进度会保留",
   "mineSignOutBody": "将清除本机保存的网盘授权。书架与收听进度会保留，重新登录后即可继续。",
   "mineSignOutConfirm": "退出",
+  "mineSignIn": "登录百度网盘",
+  "mineSignInSubtitle": "登录后可添加、播放网盘里的书",
   "mineFooter": "{appName}{version} · 只访问你本人网盘中的文件",
   "@mineFooter": {
     "placeholders": {
@@ -537,6 +540,8 @@
   "addSearchClear": "清除",
   "addScanning": "正在查找网盘里的有声书…",
   "addScanFailed": "没能读取网盘",
+  "addSignInTitle": "还没有登录百度网盘",
+  "addSignInBody": "登录后就能把网盘里的书加进书架。手机里的书不用登录也能添加。",
   "addNoAudioAnywhere": "网盘里没有找到音频文件",
   "addNoMatch": "没有找到「{query}」",
   "@addNoMatch": {

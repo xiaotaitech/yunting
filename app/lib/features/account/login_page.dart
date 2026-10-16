@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yun_audiobook/app/providers.dart';
+import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/features/account/web_login_page.dart';
@@ -30,7 +32,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String? _error;
 
   /// App 内登录：打开授权页 → 拿回 code → 经代理换令牌。
-  /// 成功后 router 的 redirect 会把本页换成书架。
+  /// 成功后本页自己关掉（见 build 里的 ref.listen）。
   Future<void> _signInInApp() async {
     final l = context.l10n;
     final auth = ref.read(authRepositoryProvider);
@@ -68,8 +70,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   /// 设备码授权（备用）：在浏览器或另一台设备上输入用户码。
   Future<void> _start() async {
     final l = context.l10n;
-    // 授权一成功，router 的 redirect 就会把本页换掉（State 随之 dispose，
-    // ref 失效），所以后面要用到的都在这里先取好。
+    // 授权一成功本页就会关掉（State 随之 dispose，ref 失效），
+    // 所以后面要用到的都在这里先取好。
     final auth = ref.read(authRepositoryProvider);
     setState(() {
       _busy = true;
@@ -109,8 +111,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final l = context.l10n;
     final theme = Theme.of(context);
     final session = _session;
+    // 登录成功：回到打开登录页的地方（书架、我的、添加书籍）
+    ref.listen(authStateProvider, (_, next) {
+      if (next.value != AuthState.signedIn) return;
+      context.canPop() ? context.pop() : context.go(Routes.shelf);
+    });
 
     return Scaffold(
+      // 登录页是从书架、我的等处按需打开的，留一个返回
+      appBar: AppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

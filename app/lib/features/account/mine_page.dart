@@ -5,6 +5,7 @@ import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/core/config.dart';
 import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/data/local/settings_dao.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/features/account/account_controller.dart';
@@ -25,6 +26,8 @@ class MinePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
+    final signedIn =
+        ref.watch(authStateProvider).value == AuthState.signedIn;
 
     return Scaffold(
       appBar: AppBar(title: Text(l.navMine)),
@@ -57,7 +60,15 @@ class MinePage extends ConsumerWidget {
               // 演示模式没有百度账号，不存在"退出"
               if (!AppConfig.demoMode) ...[
                 _Group(l.mineGroupAccount),
-                const _SignOutTile(),
+                if (signedIn)
+                  const _SignOutTile()
+                else
+                  ListTile(
+                    leading: const Icon(Icons.login),
+                    title: Text(l.mineSignIn),
+                    subtitle: Text(l.mineSignInSubtitle),
+                    onTap: () => context.push(Routes.login),
+                  ),
               ],
               _Footer(version: v),
             ],

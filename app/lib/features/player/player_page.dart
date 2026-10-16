@@ -3,7 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/providers.dart';
+import 'package:yun_audiobook/app/routes.dart';
+import 'package:yun_audiobook/core/errors.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/widgets/series_cover.dart';
@@ -69,7 +72,14 @@ class _PlayerPageState extends ConsumerState<PlayerPage> {
                   label: l.actionRetry,
                   onPressed: () => unawaited(session.retry()),
                 )
-              : null,
+              // 网盘没登录或授权失效：给个登录入口（本地优先，退出后不会自动跳登录页）
+              : f.kind == DriveErrorKind.authExpired ||
+                      f.kind == DriveErrorKind.authInvalid
+                  ? SnackBarAction(
+                      label: l.actionSignIn,
+                      onPressed: () => unawaited(context.push(Routes.login)),
+                    )
+                  : null,
           duration: const Duration(seconds: 6),
         ),
       );

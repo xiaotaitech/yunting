@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yun_audiobook/app/providers.dart';
 import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/core/errors.dart';
+import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/domain/media_folders.dart';
@@ -35,8 +36,11 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   /// 有声书（含音频的文件夹）还是课程（含视频的文件夹）。
   MediaKind _kind = MediaKind.audio;
 
-  /// 从网盘加，还是从这台手机里加（add-local-media）。
-  bool _device = false;
+  /// 从网盘加，还是从这台手机里加（add-local-media）。没登录网盘时默认本机。
+  late bool _device = !_signedIn;
+
+  bool get _signedIn =>
+      ref.read(authStateProvider).value == AuthState.signedIn;
 
   Future<void> _grant() async {
     await ref.read(servicesProvider).localMedia.requestPermission(_kind);
@@ -65,9 +69,13 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final signedIn = ref.watch(authStateProvider).value == AuthState.signedIn;
+    // 没登录时不去扫网盘，网盘栏只给登录入口
     final folders = _device
         ? ref.watch(localMediaFoldersProvider(_kind))
-        : ref.watch(mediaFoldersProvider(_kind));
+        : signedIn
+            ? ref.watch(mediaFoldersProvider(_kind))
+            : const AsyncValue<List<MediaFolder>>.data([]);
     final granted = !_device ||
         (ref.watch(localMediaPermissionProvider(_kind)).value ?? true);
 
@@ -76,7 +84,7 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
         title: Text(l.shelfAdd),
         actions: [
           // 按目录逐层浏览只对网盘有意义
-          if (!_device)
+          if (!_device && signedIn)
             TextButton.icon(
               onPressed: () => context.push(Routes.browse('/')),
               icon: const Icon(Icons.folder_open_outlined),
@@ -162,7 +170,19 @@ class _AddSeriesPageState extends ConsumerState<AddSeriesPage> {
                   ..selection = TextSelection.collapsed(offset: q.length);
               }),
             ),
-          Expanded(child: _body(context, folders, granted)),
+          Expanded(
+            child: !_device && !signedIn
+                ? EmptyState(
+                    icon: Icons.cloud_outlined,
+                    title: l.addSignInTitle,
+                    description: l.addSignInBody,
+                    action: FilledButton(
+                      onPressed: () => context.push(Routes.login),
+                      child: Text(l.actionSignIn),
+                    ),
+                  )
+                : _body(context, folders, granted),
+          ),
         ],
       ),
     );
