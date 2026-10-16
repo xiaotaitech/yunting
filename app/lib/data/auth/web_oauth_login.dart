@@ -13,6 +13,9 @@ abstract interface class WebOAuthLogin {
   /// 识别授权完成后的回跳地址；不是回跳返回 null（WebView 照常导航）。
   OAuthCallback? parseCallback(Uri url);
 
+  /// 页面加载完后注入的 CSS，用来藏掉授权页里与 App 顶栏重复的内容；不需要返回 null。
+  String? get pageCss;
+
   /// 用回跳带回的 code 换令牌并保存，完成后视为已登录。
   Future<void> exchangeCode(String code);
 }

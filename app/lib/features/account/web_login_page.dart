@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -68,6 +69,15 @@ class _WebLoginPageState extends State<WebLoginPage> {
         NavigationDelegate(
           onProgress: (p) {
             if (mounted) setState(() => _progress = p);
+          },
+          onPageFinished: (_) {
+            final css = widget.login.pageCss;
+            if (css == null) return;
+            final style = jsonEncode(css);
+            unawaited(_web.runJavaScript(
+              "var s = document.createElement('style'); "
+              's.textContent = $style; document.head.appendChild(s);',
+            ));
           },
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);

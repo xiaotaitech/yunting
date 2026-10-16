@@ -154,6 +154,13 @@ class AuthRepository implements WebOAuthLogin {
   @override
   OAuthCallback? parseCallback(Uri url) => parseBaiduCallback(url);
 
+  /// 授权页顶部的 logo 与「欢迎登录百度网盘账号」原本很大，上方还留了大片空白，缩小。
+  @override
+  String? get pageCss => '.normandy-img-div{padding-top:2.4rem!important}'
+      '.normandy-img-logo{width:4rem!important}'
+      '.normandy-title-content{font-size:2rem!important;'
+      'line-height:2.6rem!important}';
+
   /// 用授权页回跳带回的 code 换令牌（AppSecret 只在代理那边）。
   @override
   Future<AuthToken> exchangeCode(String code) async {
