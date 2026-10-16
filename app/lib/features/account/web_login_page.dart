@@ -136,6 +136,10 @@ class _WebLoginPageState extends State<WebLoginPage> {
         }
       },
       child: Scaffold(
+        // 弹键盘时不缩 WebView：百度登录页的脚本在输入框聚焦 0.5 秒后只要页面高度
+        // 一变就判定键盘已收起并让输入框失焦，而 Flutter 逐帧缩放 WebView 会撞上，
+        // 结果键盘弹出即收回。输入框都在页面上半部分，不会被键盘挡住。
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           leading: IconButton(
             tooltip: l.actionCancel,

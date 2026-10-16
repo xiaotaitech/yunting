@@ -159,11 +159,14 @@ class AuthRepository implements WebOAuthLogin {
   OAuthCallback? parseCallback(Uri url) => parseBaiduCallback(url);
 
   /// 授权页顶部的 logo 与「欢迎登录百度网盘账号」原本很大，上方还留了大片空白，缩小。
+  /// 「注册 / 切换登录方式」一行在输入框聚焦时被页面脚本藏起，要等页面高度变化
+  /// 才放出来；登录页不随键盘缩放（见 WebLoginPage），所以让它一直显示。
   @override
   String? get pageCss => '.normandy-img-div{padding-top:2.4rem!important}'
       '.normandy-img-logo{width:4rem!important}'
       '.normandy-title-content{font-size:2rem!important;'
-      'line-height:2.6rem!important}';
+      'line-height:2.6rem!important}'
+      '#smsLoginWrapper.hide{display:block!important}';
 
   /// 用授权页回跳带回的 code 换令牌（AppSecret 只在代理那边）。
   @override
