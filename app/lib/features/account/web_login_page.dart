@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:yun_audiobook/core/logging.dart';
 import 'package:yun_audiobook/data/auth/web_oauth_login.dart';
 import 'package:yun_audiobook/features/common/widgets/empty_state.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
@@ -70,7 +71,9 @@ class _WebLoginPageState extends State<WebLoginPage> {
           onProgress: (p) {
             if (mounted) setState(() => _progress = p);
           },
-          onPageFinished: (_) {
+          onPageFinished: (url) {
+            final uri = Uri.tryParse(url);
+            if (uri != null) unawaited(_readCodeFromPage(uri));
             final css = widget.login.pageCss;
             if (css == null) return;
             final style = jsonEncode(css);
@@ -107,6 +110,24 @@ class _WebLoginPageState extends State<WebLoginPage> {
       ),
     );
     unawaited(_web.loadRequest(widget.authorizeUrl));
+  }
+
+  /// 授权码显示在页面上而没有回跳时，从页面读出来，当作回跳处理。
+  Future<void> _readCodeFromPage(Uri url) async {
+    final script = widget.login.codeScript;
+    if (script == null || !widget.login.isCodePage(url)) return;
+    // 授权码可能由页面脚本在加载完后才填进去，读不到就隔一会儿再试
+    for (var i = 0; i < 6 && !_done && mounted; i++) {
+      try {
+        final result = await _web.runJavaScriptReturningResult(script);
+        // Android 返回的字符串结果带 JSON 引号
+        final code = result is String ? result.replaceAll('"', '') : '';
+        if (code.isNotEmpty) return _finish(OAuthCode(code));
+      } on Object catch (e) {
+        Log.e('auth', '读取页面上的授权码失败', e);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
   }
 
   void _finish(OAuthCallback callback) {

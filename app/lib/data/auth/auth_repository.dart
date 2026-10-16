@@ -158,6 +158,24 @@ class AuthRepository implements WebOAuthLogin {
   @override
   OAuthCallback? parseCallback(Uri url) => parseBaiduCallback(url);
 
+  /// 手机版授权页在 oob 模式下可能不跳 login_success，而是直接把授权码
+  /// （32 位十六进制）显示在页面的输入框里，这里把它读出来。
+  @override
+  String? get codeScript => r'''
+(function () {
+  var text = document.body.innerText;
+  if (text.indexOf('授权码') < 0) return '';
+  var inputs = document.querySelectorAll('input:not([type=hidden]),textarea');
+  var codes = [].map.call(inputs, function (i) { return i.value.trim(); })
+    .filter(function (v) { return /^[0-9a-f]{32}$/.test(v); });
+  if (codes.length === 1) return codes[0];
+  var m = text.match(/授权码\s*([0-9a-f]{32})\b/);
+  return m ? m[1] : '';
+})()''';
+
+  @override
+  bool isCodePage(Uri url) => url.host == 'openapi.baidu.com';
+
   /// 授权页顶部的 logo 与「欢迎登录百度网盘账号」原本很大，上方还留了大片空白，缩小。
   /// 「注册 / 切换登录方式」一行在输入框聚焦时被页面脚本藏起，要等页面高度变化
   /// 才放出来；登录页不随键盘缩放（见 WebLoginPage），所以让它一直显示。

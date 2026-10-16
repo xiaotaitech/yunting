@@ -13,6 +13,13 @@ abstract interface class WebOAuthLogin {
   /// 识别授权完成后的回跳地址；不是回跳返回 null（WebView 照常导航）。
   OAuthCallback? parseCallback(Uri url);
 
+  /// 授权码直接显示在页面上、没有回跳时，从页面读出 code 的 JS 表达式：
+  /// 返回 code 字符串，读不到返回空串。只在 [isCodePage] 为真的页面上执行。
+  String? get codeScript;
+
+  /// 是否可能是显示授权码的页面（决定要不要执行 [codeScript]）。
+  bool isCodePage(Uri url);
+
   /// 页面加载完后注入的 CSS，用来藏掉授权页里与 App 顶栏重复的内容；不需要返回 null。
   String? get pageCss;
 
