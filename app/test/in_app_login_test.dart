@@ -88,8 +88,13 @@ void main() {
       calls = [];
     });
 
-    test('授权页地址由代理给出', () async {
-      expect((await repo().authorizeUrl()).toString(), _authorize);
+    test('授权页地址由代理给出，默认短信登录', () async {
+      final url = await repo().authorizeUrl();
+      expect(
+          url.replace(
+              queryParameters: {...url.queryParameters}..remove('login_type')),
+          Uri.parse(_authorize));
+      expect(url.queryParameters['login_type'], 'sms');
     });
 
     test('code 换令牌：存下令牌并切到已登录', () async {

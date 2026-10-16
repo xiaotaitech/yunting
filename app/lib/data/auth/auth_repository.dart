@@ -145,10 +145,14 @@ class AuthRepository implements WebOAuthLogin {
 
   /// 百度授权页地址（授权码模式，redirect_uri=oob，手机版页面）。
   /// 由代理拼出来：客户端不必知道 scope 等细节，换 AppKey 也只改代理。
+  /// 默认打开短信登录（login_type=sms，与页面上「短信登录」链接一致），
+  /// 页面上可切回账号密码登录。
   @override
   Future<Uri> authorizeUrl() async {
     final res = await _get('/oauth/authorize-url');
-    return Uri.parse(res['url'] as String);
+    final url = Uri.parse(res['url'] as String);
+    return url.replace(
+        queryParameters: {...url.queryParameters, 'login_type': 'sms'});
   }
 
   @override
