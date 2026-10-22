@@ -7,7 +7,7 @@ import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/player/playback_controller.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
-/// 续播入口。首页续听卡片与书架条目上的播放键共用这一条路径——
+/// 续播入口。迷你播放条的续听状态与书架条目上的播放键共用这一条路径——
 /// 分成两份的话，两个入口迟早会对同一种异常给出两种反应，
 /// 而异常正是用户最容易撞见的地方。
 Future<void> resumeSeries(

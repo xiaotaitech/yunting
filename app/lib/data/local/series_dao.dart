@@ -131,6 +131,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
   Future<void> replaceEpisodes(String seriesId, List<Episode> episodes) =>
       transaction(() async {
         // 保留已有的缓存状态，刷新章节列表不该让已下载的文件"消失"。
+        // 时长也留着：它要等播放器加载过才知道，重扫一遍目录拿不回来。
         final existing = await (select(chapters)
               ..where((c) => c.bookId.equals(seriesId)))
             .get();
@@ -145,6 +146,9 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
               localPath: kept == null ? null : Value(kept.localPath),
               downloadedBytes:
                   kept == null ? null : Value(kept.downloadedBytes),
+              durationMs: kept == null || e.durationMs != null
+                  ? null
+                  : Value(kept.durationMs),
             ),
           );
         }

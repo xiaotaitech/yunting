@@ -39,7 +39,7 @@ class PlaybackController extends _$PlaybackController {
   @override
   void build() {}
 
-  /// 从合集的断点续播（书架播放键、续听卡片）。
+  /// 从合集的断点续播（书架播放键、迷你播放条续听）。
   Future<OpenResult> resume(Series series) async {
     if (_isCurrent(series.id)) return const OpenAlreadyPlaying();
     final episodes = await ref

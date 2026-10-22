@@ -10,7 +10,6 @@ import 'package:yun_audiobook/app/routes.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
-import 'package:yun_audiobook/features/shelf/widgets/continue_card.dart';
 import 'package:yun_audiobook/features/shelf/widgets/empty_shelf.dart';
 import 'package:yun_audiobook/features/shelf/widgets/shelf_error_view.dart';
 import 'package:yun_audiobook/features/shelf/widgets/shelf_tile.dart';
@@ -18,10 +17,8 @@ import 'package:yun_audiobook/l10n/l10n.dart';
 
 /// 书架（library-catalog 规格「书架管理」）。
 ///
-/// 列表下方是「继续收听」卡片（listening-progress 规格「首页续听入口」）：
-/// 打开 App 最常见的诉求就是接着上次听，不该让用户先在一列同构卡片里
-/// 认出那本书。放在下方而不是顶部，是因为那里离拇指更近；它钉在屏幕底部、
-/// 不跟着列表滚——书一多，放在列表末尾就被挤出屏幕了。
+/// 续听入口不在这一页：没有播放会话时，底部迷你播放条显示上次听的那本
+/// （见 MiniPlayer），任何页面都能接着听，也不占书架的地方。
 class ShelfPage extends ConsumerStatefulWidget {
   const ShelfPage({super.key});
 
@@ -210,48 +207,26 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
           ),
           data: (list) => list.isEmpty
               ? const EmptyShelf()
-              : Column(
-                  children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        // 下拉 = 去网盘看看有没有新内容。等检查完再收起转圈，
-                        // 不然圈一闪就没了，看不出刷没刷
-                        onRefresh: () => _checkUpdates(manual: true),
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          children: [
-                            for (final series in list)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: ShelfTile(
-                                  series: series,
-                                  selecting: _managing,
-                                  selected: _selected.contains(series.id),
-                                  onToggle: () => _toggle(series.id),
-                                  onLongPress: () => _enter(series.id),
-                                ),
-                              ),
-                          ],
+              : RefreshIndicator(
+                  // 下拉 = 去网盘看看有没有新内容。等检查完再收起转圈，
+                  // 不然圈一闪就没了，看不出刷没刷
+                  onRefresh: () => _checkUpdates(manual: true),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: [
+                      for (final series in list)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: ShelfTile(
+                            series: series,
+                            selecting: _managing,
+                            selected: _selected.contains(series.id),
+                            onToggle: () => _toggle(series.id),
+                            onLongPress: () => _enter(series.id),
+                          ),
                         ),
-                      ),
-                    ),
-                    // 续听卡片钉在列表下面：手够得着的地方。管理模式下不显示
-                    // 外层 Scaffold 挂着迷你播放条，body 的底部 inset 被它整个去掉了，
-                    // SafeArea / MediaQuery 都读不到；直接从窗口取，让开系统手势条
-                    if (!_managing)
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          0,
-                          16,
-                          8 +
-                              MediaQueryData.fromView(View.of(context))
-                                  .viewPadding
-                                  .bottom,
-                        ),
-                        child: const ContinueListeningCard(),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
         ),
       ),

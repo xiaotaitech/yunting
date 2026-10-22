@@ -56,4 +56,13 @@ void main() {
     expect(eps.map((e) => e.title), ['第1章', '第2章', '第3章', '第4章']);
     expect((await db.seriesDao.seriesById(s.id))!.episodeCount, 4);
   });
+
+  test('重扫后已记下的时长还在', () async {
+    final s = await library.claimFolder('local:/Music/书');
+    final first = (await db.seriesDao.episodesOf(s.id)).first;
+    await db.seriesDao.setDuration(first.id, 60000);
+    files = [...files, ch(3)];
+    await library.refresh(s, onlyIfChanged: true);
+    expect((await db.seriesDao.episodesOf(s.id)).first.durationMs, 60000);
+  });
 }
