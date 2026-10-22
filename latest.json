@@ -1,0 +1,10 @@
+{
+  "version": "0.6.4",
+  "notes": "## 云听书 0.6.4\n\n- 底部播放条直接续听：打开 App 就显示上次听的那本和断点，点 ▶ 接着听，不再占用书架上方一大块地方\n- 网盘里的书有新章节会自动发现：打开书架时检查一次，下拉也能手动检查，有更新会提示「《书名》新增 N 章」\n- App 内直接登录百度网盘，默认短信验证码登录，不用再跳到浏览器或其他设备\n- 不登录也能用：手机里的本地音频照常加书、收听，需要网盘时再登录\n- 左侧抽屉显示最近收听；网盘目录先显示上次的结果、后台再刷新，打开更快\n- 添加书籍的搜索记录保存在本机，可删除可清空\n- 书架、进度、历史只保存在本机，不再同步到网盘\n- 修复：重新扫描章节后，续听进度会退回成整本书的进度\n\n下载 yunting.apk 安装；已安装的用户可在「我的 → 检查更新」直接更新。\n",
+  "page": "https://github.com/xiaotaitech/yunting/releases/tag/v0.6.4",
+  "apk": [
+    "https://cdn.jsdelivr.net/gh/xiaotaitech/yunting@5ab89014a02b3886ecb785c19b9baa47309e25e3/yunting.apk",
+    "https://fastly.jsdelivr.net/gh/xiaotaitech/yunting@5ab89014a02b3886ecb785c19b9baa47309e25e3/yunting.apk",
+    "https://github.com/xiaotaitech/yunting/releases/download/v0.6.4/yunting.apk"
+  ]
+}
