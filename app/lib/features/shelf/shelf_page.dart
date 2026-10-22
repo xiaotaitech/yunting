@@ -20,7 +20,8 @@ import 'package:yun_audiobook/l10n/l10n.dart';
 ///
 /// 列表下方是「继续收听」卡片（listening-progress 规格「首页续听入口」）：
 /// 打开 App 最常见的诉求就是接着上次听，不该让用户先在一列同构卡片里
-/// 认出那本书。放在下方而不是顶部，是因为那里离拇指更近。
+/// 认出那本书。放在下方而不是顶部，是因为那里离拇指更近；它钉在屏幕底部、
+/// 不跟着列表滚——书一多，放在列表末尾就被挤出屏幕了。
 class ShelfPage extends ConsumerStatefulWidget {
   const ShelfPage({super.key});
 
@@ -29,6 +30,42 @@ class ShelfPage extends ConsumerStatefulWidget {
 }
 
 class _ShelfPageState extends ConsumerState<ShelfPage> {
+  /// 本次启动是否已自动检查过网盘更新。进程级：切走再回到书架不重复检查。
+  static bool _checkedThisLaunch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_checkedThisLaunch) {
+      _checkedThisLaunch = true;
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => unawaited(_checkUpdates()));
+    }
+  }
+
+  /// 对一遍网盘，有新内容就提示。自动检查时没更新就不出声，下拉刷新则告诉一声。
+  Future<void> _checkUpdates({bool manual = false}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = context.l10n;
+    final updated =
+        await ref.read(libraryControllerProvider.notifier).checkUpdates();
+    if (!mounted) return;
+    final String text;
+    if (updated.isEmpty) {
+      if (!manual) return;
+      text = l.shelfUpToDate;
+    } else if (updated.length == 1) {
+      final MapEntry(key: s, value: n) = updated.entries.single;
+      text = l.shelfUpdatedOne(s.title, n, l.unit(s.kind));
+    } else {
+      text = l.shelfUpdatedMany(
+        updated.length,
+        updated.values.fold(0, (a, b) => a + b),
+      );
+    }
+    messenger.showSnackBar(SnackBar(content: Text(text)));
+  }
+
   /// 书架管理模式（批量移出）。长按任意一本或点「管理」进入。
   bool _managing = false;
   final Set<String> _selected = {};
@@ -170,28 +207,48 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
           ),
           data: (list) => list.isEmpty
               ? const EmptyShelf()
-              : RefreshIndicator(
-                  // 等新数据回来再收起转圈；只 invalidate 不等的话，
-                  // 下拉的圈一闪就没了，看不出刷没刷
-                  onRefresh: () => ref.refresh(shelfProvider.future),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    children: [
-                      for (final series in list)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ShelfTile(
-                            series: series,
-                            selecting: _managing,
-                            selected: _selected.contains(series.id),
-                            onToggle: () => _toggle(series.id),
-                            onLongPress: () => _enter(series.id),
-                          ),
+              : Column(
+                  children: [
+                    Expanded(
+                      child: RefreshIndicator(
+                        // 下拉 = 去网盘看看有没有新内容。等检查完再收起转圈，
+                        // 不然圈一闪就没了，看不出刷没刷
+                        onRefresh: () => _checkUpdates(manual: true),
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          children: [
+                            for (final series in list)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: ShelfTile(
+                                  series: series,
+                                  selecting: _managing,
+                                  selected: _selected.contains(series.id),
+                                  onToggle: () => _toggle(series.id),
+                                  onLongPress: () => _enter(series.id),
+                                ),
+                              ),
+                          ],
                         ),
-                      // 续听卡片放在书架下面：手够得着的地方。管理模式下不显示
-                      if (!_managing) const ContinueListeningCard(),
-                    ],
-                  ),
+                      ),
+                    ),
+                    // 续听卡片钉在列表下面：手够得着的地方。管理模式下不显示
+                    // 外层 Scaffold 挂着迷你播放条，body 的底部 inset 被它整个去掉了，
+                    // SafeArea / MediaQuery 都读不到；直接从窗口取，让开系统手势条
+                    if (!_managing)
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          0,
+                          16,
+                          8 +
+                              MediaQueryData.fromView(View.of(context))
+                                  .viewPadding
+                                  .bottom,
+                        ),
+                        child: const ContinueListeningCard(),
+                      ),
+                  ],
                 ),
         ),
       ),

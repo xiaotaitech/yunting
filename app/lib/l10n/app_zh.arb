@@ -668,6 +668,32 @@
     }
   },
   "shelfUndo": "撤销",
+  "shelfUpdatedOne": "《{title}》新增 {count} {unit}",
+  "@shelfUpdatedOne": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfUpdatedMany": "{books} 本书有新内容，共新增 {count} 项",
+  "@shelfUpdatedMany": {
+    "placeholders": {
+      "books": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfUpToDate": "书架上的书都是最新的",
   "cacheRefreshFailed": "刷新失败，显示的是上次的结果",
   "addRecentSearches": "最近搜索",
   "addClearSearches": "清空",

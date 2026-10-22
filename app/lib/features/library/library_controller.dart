@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yun_audiobook/app/providers.dart';
+import 'package:yun_audiobook/core/logging.dart';
+import 'package:yun_audiobook/data/auth/auth_repository.dart';
 import 'package:yun_audiobook/domain/entities.dart';
 import 'package:yun_audiobook/domain/local_media.dart';
 
@@ -61,6 +63,27 @@ class LibraryController extends _$LibraryController {
   /// 重新扫描网盘里的条目。只影响本地派生数据，不需要同步。
   Future<void> refresh(Series series) =>
       ref.read(libraryRepositoryProvider).refresh(series);
+
+  /// 书架整体对一遍网盘：哪些书在网盘里加了新内容。返回有新增的书及新增条目数。
+  ///
+  /// 逐本串行、只在目录有变化时才重建条目（见 LibraryRepository.refresh）。
+  /// 一本失败不影响其余；没登录时跳过网盘书——那时列目录必失败，没必要打一圈。
+  Future<Map<Series, int>> checkUpdates() async {
+    final signedIn =
+        ref.read(authRepositoryProvider).currentState == AuthState.signedIn;
+    final repo = ref.read(libraryRepositoryProvider);
+    final updated = <Series, int>{};
+    for (final s in await shelfOnce()) {
+      if (!s.isLocal && !signedIn) continue;
+      try {
+        final added = await repo.refresh(s, onlyIfChanged: true);
+        if (added > 0) updated[s] = added;
+      } on Object catch (e) {
+        Log.d('library', '检查《${s.title}》更新失败（忽略）：$e');
+      }
+    }
+    return updated;
+  }
 
   Future<void> edit(Series series, {String? title, String? author}) async {
     await ref

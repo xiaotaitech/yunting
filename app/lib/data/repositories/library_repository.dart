@@ -243,19 +243,31 @@ class LibraryRepository {
   }
 
   /// 刷新一个合集的条目。用户编辑过的字段与手动排序都必须保住。
-  Future<void> refresh(Series series) async {
+  ///
+  /// 返回网盘里新增的条目数（本地原本一条都没有时记 0：那是补齐，不算更新）。
+  /// [onlyIfChanged] 为真时先只列目录比对文件：没变化就到此为止——
+  /// 重建条目要探 ID3，每个文件一次 dlink + Range 读，书架整体检查时扛不住。
+  Future<int> refresh(Series series, {bool onlyIfChanged = false}) async {
     try {
       final collected = (await _collect(series.folderPath)).files;
       if (collected.isEmpty) {
         await _markMissing(series, missing: true);
-        return;
+        return 0;
+      }
+
+      final existing = await _dao.episodesOf(series.id);
+      final knownFsIds = existing.map((c) => c.fsId).toSet();
+      final added =
+          collected.where((e) => !knownFsIds.contains(e.fsId)).toList();
+      if (onlyIfChanged &&
+          added.isEmpty &&
+          collected.length == existing.length &&
+          !series.sourceMissing) {
+        return 0;
       }
 
       if (series.orderEditedByUser) {
         // 用户排过序：只补新增条目，不重排已有顺序（规格「手动调整顺序」）
-        final existing = await _dao.episodesOf(series.id);
-        final knownFsIds = existing.map((c) => c.fsId).toSet();
-        final added = collected.where((e) => !knownFsIds.contains(e.fsId));
         var index = existing.length;
         final merged = [
           ...existing,
@@ -287,11 +299,12 @@ class LibraryRepository {
         await _dao.upsertSeries(series.copyWith(kind: SeriesKind.course));
       }
       if (series.sourceMissing) await _markMissing(series, missing: false);
+      return existing.isEmpty ? 0 : added.length;
     } on DriveException catch (e) {
       if (e.kind == DriveErrorKind.notFound) {
         // 网盘路径消失：保留书架条目与进度，只做标记（规格「网盘文件已被删除」）
         await _markMissing(series, missing: true);
-        return;
+        return 0;
       }
       rethrow;
     }
