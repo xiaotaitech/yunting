@@ -68,7 +68,13 @@ class LibraryController extends _$LibraryController {
   ///
   /// 逐本串行、只在目录有变化时才重建条目（见 LibraryRepository.refresh）。
   /// 一本失败不影响其余；没登录时跳过网盘书——那时列目录必失败，没必要打一圈。
-  Future<Map<Series, int>> checkUpdates() async {
+  /// 书多时一轮要十几秒，启动时的自动检查还没完又下拉的话，复用同一轮，
+  /// 免得两轮并发重扫同一批书、新增数算重。
+  Future<Map<Series, int>> checkUpdates() =>
+      _checking ??= _checkUpdates().whenComplete(() => _checking = null);
+  Future<Map<Series, int>>? _checking;
+
+  Future<Map<Series, int>> _checkUpdates() async {
     final signedIn =
         ref.read(authRepositoryProvider).currentState == AuthState.signedIn;
     final repo = ref.read(libraryRepositoryProvider);

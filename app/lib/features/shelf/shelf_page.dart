@@ -63,7 +63,10 @@ class _ShelfPageState extends ConsumerState<ShelfPage> {
         updated.values.fold(0, (a, b) => a + b),
       );
     }
-    messenger.showSnackBar(SnackBar(content: Text(text)));
+    // 自动检查与下拉可能共用同一轮结果，先收起上一条，别连弹两条一样的
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   /// 书架管理模式（批量移出）。长按任意一本或点「管理」进入。
