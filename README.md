@@ -134,21 +134,11 @@ ipconfig | findstr IPv4
 这个代理只做两件事：`code → token` 和 `refresh_token → token`。
 它不接触任何文件元数据、不缓存音频、日志不记录用户文件路径。
 
-### 公网部署：Cloudflare Workers
+### 公网部署：阿里云 bj1
 
-正式版用的代理是同一组端点的 Workers 版本（`tools/src/worker.mjs`），
-绑在自有域名 `https://yunting-auth.xiaotai.tech` 上——`*.workers.dev` 在国内基本不可达。
-
-```bash
-cd tools
-export CLOUDFLARE_API_TOKEN=...      # Edit Cloudflare Workers 模板，Zone 选 xiaotai.tech
-npx wrangler deploy
-# 首次部署后写入凭证（存为 Worker Secret，不进仓库）
-npx wrangler secret put BAIDU_APP_KEY
-npx wrangler secret put BAIDU_SECRET_KEY
-```
-
-Worker 必须与域名在同一个 Cloudflare 账号下，否则绑定自定义域名会报 `Can't infer zone`。
+正式版用的就是这个 Node 代理（`tools/src/oauth-proxy.mjs`），跑在阿里云 ECS bj1 上（systemd `yunting-oauth`，监听 127.0.0.1:8787），
+nginx 反代到 `https://yunting-auth.xiaotai.tech`。部署与凭据由 mooring 仓库管理：改了 `tools/src/` 后在 mooring 跑 `host/bj1/sync.sh`
+推送并重启；百度 AppKey / SecretKey 在机器的 `/etc/yunting-oauth.env`，不进仓库。
 
 ---
 
@@ -315,7 +305,7 @@ app/lib/
 2. **分派**：`app/app_services.dart` 里 `RoutingDriveSource(byPrefix: {...})` 加一项 `'aliyun:': AliyunDriveSource(...)`。
    书架、认领、播放、离线下载自动按前缀走到它；解析出的播放地址带 `sourceId`，下载取流会交回同一个源。
 3. **登录**：实现 `WebOAuthLogin`（`data/auth/web_oauth_login.dart`）：授权页地址、回跳识别、code 换令牌。
-   AppSecret 照例放 OAuth 代理（`tools/src/worker.mjs` 加对应端点），令牌存储用独立的键，别和百度的混在一起。
+   AppSecret 照例放 OAuth 代理（`tools/src/oauth-proxy.mjs` 加对应端点），令牌存储用独立的键，别和百度的混在一起。
    App 内登录页 `WebLoginPage` 直接复用，不用再写 WebView。
 4. **入口**：登录页加一个「登录阿里云盘」按钮；「添加书籍」加一个来源分段（现在的整盘扫描 `listMediaFiles` 只走百度）。
 
