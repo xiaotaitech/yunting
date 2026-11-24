@@ -169,8 +169,9 @@ class LibraryRepository {
   List<Episode> _buildEpisodes(
     String seriesId,
     List<DriveEntry> files,
-    Map<String, AudioTags> tags,
-  ) {
+    Map<String, AudioTags> tags, {
+    EpisodeOrder order = EpisodeOrder.name,
+  }) {
     // track 号只有在**每一个**章节都有的时候才作为排序依据。
     // 只有部分章节带 track 时混着比，比较器会失去传递性，
     // 排出来的顺序是随机的——那比老老实实按文件名排还糟。
@@ -183,18 +184,37 @@ class LibraryRepository {
     // `0404 一个人的疗愈/一个人的疗愈.mp3` 这种。把所有文件平铺后只按文件名排，
     // 得到的顺序毫无意义（实测排出了 0411 → 0404 → 0516）。
     // 单目录的书里所有文件同属一个目录，这一层比较恒等，行为不变。
+    int byName(DriveEntry a, DriveEntry b) {
+      final dirA = parentDirOf(a.path);
+      final dirB = parentDirOf(b.path);
+      if (dirA != dirB) return compareNatural(dirA, dirB);
+      return compareChapters(
+        nameA: a.name,
+        nameB: b.name,
+        trackA: allHaveTrack ? tags[a.fsId]?.track : null,
+        trackB: allHaveTrack ? tags[b.fsId]?.track : null,
+      );
+    }
+
+    // 按时间：上传时间从旧到新，追更目录里新的一期总在末尾。
+    // 上传时间相同（整批上传）再看同步时间，还相同就回到自然序。
+    // 时间缺失的排在最后，不让它把有时间的章节顶乱。
+    int byTime(DriveEntry a, DriveEntry b) {
+      int cmp(int? x, int? y) => x == y
+          ? 0
+          : x == null
+              ? 1
+              : y == null
+                  ? -1
+                  : x.compareTo(y);
+      final c = cmp(a.serverCtime, b.serverCtime);
+      if (c != 0) return c;
+      final m = cmp(a.serverMtime, b.serverMtime);
+      return m != 0 ? m : byName(a, b);
+    }
+
     final sorted = files.toList()
-      ..sort((a, b) {
-        final dirA = parentDirOf(a.path);
-        final dirB = parentDirOf(b.path);
-        if (dirA != dirB) return compareNatural(dirA, dirB);
-        return compareChapters(
-          nameA: a.name,
-          nameB: b.name,
-          trackA: allHaveTrack ? tags[a.fsId]?.track : null,
-          trackB: allHaveTrack ? tags[b.fsId]?.track : null,
-        );
-      });
+      ..sort(order == EpisodeOrder.time ? byTime : byName);
 
     return [
       for (var i = 0; i < sorted.length; i++)
@@ -210,9 +230,16 @@ class LibraryRepository {
           size: sorted[i].size,
           orderIndex: i,
           trackNumber: tags[sorted[i].fsId]?.track,
+          createdAt: _driveTime(sorted[i].serverCtime),
+          syncedAt: _driveTime(sorted[i].serverMtime),
         ),
     ];
   }
+
+  /// 网盘给的时间是秒。
+  static DateTime? _driveTime(int? seconds) => seconds == null
+      ? null
+      : DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
 
   /// 读取每个文件头部的若干 KB 解析 ID3。
   ///
@@ -269,8 +296,14 @@ class LibraryRepository {
       if (series.orderEditedByUser) {
         // 用户排过序：只补新增条目，不重排已有顺序（规格「手动调整顺序」）
         var index = existing.length;
+        // 已有章节顺序不动，但时间以网盘为准（升级前认领的老数据靠这里补上）
+        final byFsId = {for (final f in collected) f.fsId: f};
         final merged = [
-          ...existing,
+          for (final e in existing)
+            e.copyWith(
+              createdAt: _driveTime(byFsId[e.fsId]?.serverCtime) ?? e.createdAt,
+              syncedAt: _driveTime(byFsId[e.fsId]?.serverMtime) ?? e.syncedAt,
+            ),
           for (final e in added)
             Episode(
               id: '${series.id}-ch${index++}',
@@ -282,6 +315,8 @@ class LibraryRepository {
               fileName: e.name,
               size: e.size,
               orderIndex: index - 1,
+              createdAt: _driveTime(e.serverCtime),
+              syncedAt: _driveTime(e.serverMtime),
             ),
         ];
         await _dao.replaceEpisodes(series.id, merged);
@@ -289,7 +324,12 @@ class LibraryRepository {
         final tags = await _probeTags(collected);
         await _dao.replaceEpisodes(
           series.id,
-          _buildEpisodes(series.id, collected, tags),
+          _buildEpisodes(
+            series.id,
+            collected,
+            tags,
+            order: series.episodeOrder,
+          ),
         );
       }
       // 文件夹里新加了视频：有声书升级为课程（反过来不降级，免得课程被误判）
