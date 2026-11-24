@@ -20,7 +20,7 @@ env.sh                                        本机工具链环境变量
 
 客户端直连百度网盘取文件与音频流；服务端只有一个 serverless 函数负责 OAuth
 换取/刷新令牌（AppSecret 不能进客户端）。**只代理凭证，不代理数据。**
-书架与进度写回你网盘的 `/apps/yun_audiobook/library.json`，零数据库、零内容托管。
+书架、进度与历史只存本机 SQLite，不往网盘写任何东西，零服务端数据库、零内容托管。
 
 设计取舍与百度平台的硬约束，见
 [`openspec/changes/add-netdisk-audiobook-mvp/design.md`](openspec/changes/add-netdisk-audiobook-mvp/design.md)。
