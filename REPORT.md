@@ -8,7 +8,7 @@
 
 | 层 | 位置 | 状态 |
 |---|---|---|
-| 规格 | `openspec/changes/add-netdisk-audiobook-mvp/` | 提案 + 设计 + 5 份能力规格 + 83 条任务，`openspec validate` 通过 |
+| 规格 | `openspec/changes/archive/2026-11-24-add-netdisk-audiobook-mvp/` | 提案 + 设计 + 5 份能力规格 + 83 条任务，`openspec validate` 通过 |
 | 服务端 | `tools/` | OAuth 代理 + Phase 0 链路验证工具（Node，零依赖） |
 | 客户端 | `app/` | Flutter，Android + iOS，`flutter analyze` 零问题，74 个单测全绿，已连真实百度网盘跑通播放 |
 

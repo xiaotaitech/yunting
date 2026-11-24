@@ -1,6 +1,6 @@
 # 应用商店审核说明材料
 
-对应 `openspec/changes/add-netdisk-audiobook-mvp/tasks.md` 第 9.4 条。
+对应 `openspec/changes/archive/2026-11-24-add-netdisk-audiobook-mvp/tasks.md` 第 9.4 条。
 
 这类「网盘播放器」在审核时最容易被问的是**内容从哪来、有没有版权问题**。
 下面这些说明的核心是一句话：**本应用不提供任何内容，只是用户自己云存储的一个播放器。**

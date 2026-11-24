@@ -10,7 +10,7 @@
 ## 仓库结构
 
 ```
-openspec/changes/add-netdisk-audiobook-mvp/   规格（提案 / 设计 / 五份能力规格 / 任务清单）
+openspec/specs/                               规格（提案 / 设计 / 五份能力规格 / 任务清单）
 tools/                                        OAuth 代理 + Phase 0 链路验证工具（Node）
 app/                                          Flutter 客户端（Android + iOS）
 env.sh                                        本机工具链环境变量
@@ -23,7 +23,7 @@ env.sh                                        本机工具链环境变量
 书架、进度与历史只存本机 SQLite，不往网盘写任何东西，零服务端数据库、零内容托管。
 
 设计取舍与百度平台的硬约束，见
-[`openspec/changes/add-netdisk-audiobook-mvp/design.md`](openspec/changes/add-netdisk-audiobook-mvp/design.md)。
+[`openspec/changes/archive/2026-11-24-add-netdisk-audiobook-mvp/design.md`](openspec/changes/archive/2026-11-24-add-netdisk-audiobook-mvp/design.md)。
 
 ---
 
