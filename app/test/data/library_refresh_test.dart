@@ -11,13 +11,8 @@ import 'package:yun_audiobook/domain/local_media.dart';
 
 typedef Row = ({String id, int mtime, String name, String path, int size});
 
-Row ch(int n) => (
-      id: '$n',
-      name: '第$n章.mp3',
-      path: '/Music/书/第$n章.mp3',
-      size: 100,
-      mtime: n
-    );
+Row ch(int n) =>
+    (id: '$n', name: '第$n章.mp3', path: '/Music/书/第$n章.mp3', size: 100, mtime: n);
 
 void main() {
   late AppDatabase db;
@@ -145,7 +140,9 @@ void main() {
       final edited = (await db.seriesDao.seriesById(s.id))!;
       await library.refresh(edited);
       final eps = await db.seriesDao.episodesOf(s.id);
-      expect(eps.every((e) => e.syncedAt != null), isTrue);
+      DateTime sec(int t) => DateTime.fromMillisecondsSinceEpoch(t * 1000);
+      expect(eps.map((e) => e.createdAt), [sec(10), sec(20)]);
+      expect(eps.map((e) => e.syncedAt), [sec(10), sec(20)]);
     });
 
     test('切换排序方式：覆盖手动顺序，进度仍在同一个文件上', () async {
