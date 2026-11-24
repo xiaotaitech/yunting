@@ -287,11 +287,14 @@ class _Node {
   _Node.dir(this.path)
       : fsId = 'dir-${path.hashCode}',
         isDirectory = true,
-        size = 0;
+        size = 0,
+        time = null;
 
   _Node.file(this.path, int id, {bool isImage = false, bool isVideo = false})
       : fsId = '$id',
         isDirectory = false,
+        // 时间与文件序相反（后建的更早），演示里切到「按时间」看得出变化
+        time = _demoEpoch - id * 86400,
         // 给一个像样的体积，界面上显示出来才不违和
         size = isImage
             ? 180 * 1024
@@ -303,6 +306,10 @@ class _Node {
   final String fsId;
   final bool isDirectory;
   final int size;
+  final int? time;
+
+  /// 2026-11-01 00:00（UTC），秒
+  static const _demoEpoch = 1793491200;
 
   String get name => path.split('/').last;
 
@@ -312,5 +319,7 @@ class _Node {
         name: name,
         isDirectory: isDirectory,
         size: size,
+        serverCtime: time,
+        serverMtime: time,
       );
 }

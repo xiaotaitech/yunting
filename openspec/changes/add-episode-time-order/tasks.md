@@ -1,6 +1,6 @@
 ## 1. 数据：把文件时间带进章节
 
-- [ ] 1.1 `DriveEntry` 加 `serverCtime`：百度读 `server_ctime`，目录缓存 JSON 加 `ctime`（老缓存缺键读成 null），本机数据源两个时间都取修改时间，演示数据源造递增时间
+- [x] 1.1 `DriveEntry` 加 `serverCtime`：百度读 `server_ctime`，目录缓存 JSON 加 `ctime`（老缓存缺键读成 null），本机数据源两个时间都取修改时间，演示数据源造递增时间
 - [ ] 1.2 schema v5：`chapters` 加 `created_at` / `synced_at`，`books` 加 `episode_order`（默认 `name`）；`Episode` 加 `createdAt` / `syncedAt`，`Series` 加 `episodeOrder` 枚举，DAO 读写映射
 
 ## 2. 排序

@@ -34,9 +34,9 @@
 **Kind:** code
 **Files:** `lib/data/drive/cloud_drive_source.dart`、`lib/data/drive/baidu/baidu_drive_source.dart`、`lib/data/drive/local/local_media_source.dart`、`lib/data/drive/demo/demo_drive_source.dart`；测试 `test/data/drive_cache_test.dart`、`test/data/demo_drive_source_test.dart`、`test/data/local_media_source_test.dart`
 
-- [ ] Write failing tests：`DriveEntry.fromJson(toJson(e))` 保留 `serverCtime`；不含 `ctime` 键的老 JSON 读出 `serverCtime == null`；演示数据源列出的文件 `serverCtime` 非空且同目录内随文件序递增；本机数据源 `serverCtime == serverMtime`
+- [ ] Write failing tests：`DriveEntry.fromJson(toJson(e))` 保留 `serverCtime`；不含 `ctime` 键的老 JSON 读出 `serverCtime == null`；演示数据源列出的文件 `serverCtime` 非空且同目录内随文件序递减（时间顺序与名称顺序相反，演示里切换排序看得出变化）；本机数据源 `serverCtime == serverMtime`
 - [ ] Run `flutter test test/data/drive_cache_test.dart test/data/demo_drive_source_test.dart test/data/local_media_source_test.dart` — expect FAIL：`serverCtime` 未定义
-- [ ] Implement：`DriveEntry` 加 `final int? serverCtime`（秒），`toJson` 写 `'ctime'`，`fromJson` 读 `j['ctime'] as int?`；百度 `_toEntry` 读 `raw['server_ctime']`；本机数据源两个时间都取 `r.mtime`；演示数据源按文件序给 `serverCtime` / `serverMtime` 造递增值
+- [ ] Implement：`DriveEntry` 加 `final int? serverCtime`（秒），`toJson` 写 `'ctime'`，`fromJson` 读 `j['ctime'] as int?`；百度 `_toEntry` 读 `raw['server_ctime']`；本机数据源两个时间都取 `r.mtime`；演示数据源按文件序给 `serverCtime` / `serverMtime` 造递减值
 - [ ] Run 同上 — expect PASS
 - [ ] Tick `- [x] 1.1` in tasks.md; commit：`DriveEntry 带上传时间（server_ctime）`
 

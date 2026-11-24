@@ -269,6 +269,7 @@ class BaiduDriveSource implements CloudDriveSource {
       name: (raw['server_filename'] ?? raw['filename'] ?? '') as String,
       isDirectory: (raw['isdir'] as num?)?.toInt() == 1,
       size: (raw['size'] as num?)?.toInt() ?? 0,
+      serverCtime: (raw['server_ctime'] as num?)?.toInt(),
       serverMtime: (raw['server_mtime'] as num?)?.toInt(),
       thumbnailUrl: thumb,
     );

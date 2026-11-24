@@ -154,6 +154,8 @@ class LocalMediaSource implements CloudDriveSource {
         name: r.name,
         isDirectory: false,
         size: r.size,
+        // 手机文件只有修改时间，上传时间也用它
+        serverCtime: r.mtime,
         serverMtime: r.mtime,
       );
 

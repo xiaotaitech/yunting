@@ -14,6 +14,7 @@ class DriveEntry {
     required this.name,
     required this.isDirectory,
     required this.size,
+    this.serverCtime,
     this.serverMtime,
     this.thumbnailUrl,
   });
@@ -24,6 +25,7 @@ class DriveEntry {
         name: j['name']! as String,
         isDirectory: j['dir']! as bool,
         size: j['size']! as int,
+        serverCtime: j['ctime'] as int?,
         serverMtime: j['mtime'] as int?,
       );
 
@@ -32,6 +34,11 @@ class DriveEntry {
   final String name;
   final bool isDirectory;
   final int size;
+
+  /// 文件最初上传进网盘的时间（秒）。转存时保留，追更目录里基本就是发布时间。
+  final int? serverCtime;
+
+  /// 文件进到这个网盘的时间（秒），界面上叫「同步时间」。
   final int? serverMtime;
   final String? thumbnailUrl;
 
@@ -53,6 +60,7 @@ class DriveEntry {
         'name': name,
         'dir': isDirectory,
         'size': size,
+        'ctime': serverCtime,
         'mtime': serverMtime,
       };
 }
