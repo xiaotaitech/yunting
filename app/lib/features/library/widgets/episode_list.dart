@@ -7,6 +7,7 @@ import 'package:yun_audiobook/domain/local_media.dart';
 import 'package:yun_audiobook/features/common/error_text.dart';
 import 'package:yun_audiobook/features/common/format.dart';
 import 'package:yun_audiobook/features/library/library_controller.dart';
+import 'package:yun_audiobook/features/library/synced_label.dart';
 import 'package:yun_audiobook/features/player/playback_controller.dart';
 import 'package:yun_audiobook/l10n/l10n.dart';
 
@@ -70,6 +71,12 @@ class _EpisodeListState extends ConsumerState<EpisodeList> {
   }
 
   String _subtitle(AppLocalizations l, Episode e) {
+    final synced = syncedLabel(l, e.syncedAt);
+    final status = _status(l, e);
+    return synced == null ? status : '$status · $synced';
+  }
+
+  String _status(AppLocalizations l, Episode e) {
     switch (e.cacheState) {
       case CacheState.cached:
         return l.detailCachedSize(formatBytes(e.downloadedBytes));

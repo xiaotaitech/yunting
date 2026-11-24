@@ -68,6 +68,20 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
               PopupMenuItem(value: 'edit', child: Text(l.detailMenuEdit)),
               PopupMenuItem(value: 'cover', child: Text(l.detailMenuCover)),
               PopupMenuItem(value: 'refresh', child: Text(l.detailMenuRefresh)),
+              const PopupMenuDivider(),
+              CheckedPopupMenuItem(
+                value: 'order:name',
+                checked: series.episodeOrder == EpisodeOrder.name &&
+                    !series.orderEditedByUser,
+                child: Text(l.detailMenuOrderByName),
+              ),
+              CheckedPopupMenuItem(
+                value: 'order:time',
+                checked: series.episodeOrder == EpisodeOrder.time &&
+                    !series.orderEditedByUser,
+                child: Text(l.detailMenuOrderByTime),
+              ),
+              const PopupMenuDivider(),
               // 纯视频的课程、本机书都没有要离线的内容，下载与清缓存都不出现
               if (series.kind != SeriesKind.course && !series.isLocal) ...[
                 PopupMenuItem(
@@ -125,6 +139,21 @@ class _SeriesDetailPageState extends ConsumerState<SeriesDetailPage> {
         try {
           await _library.refresh(series);
           messenger.showSnackBar(SnackBar(content: Text(l.detailRefreshed)));
+        } on Object catch (_) {
+          messenger
+              .showSnackBar(SnackBar(content: Text(l.detailRefreshFailed)));
+        } finally {
+          if (mounted) setState(() => _refreshing = false);
+        }
+      case 'order:name' || 'order:time':
+        final order =
+            value == 'order:time' ? EpisodeOrder.time : EpisodeOrder.name;
+        if (order == series.episodeOrder && !series.orderEditedByUser) return;
+        // 换排序要整本重扫一遍，和「刷新章节」一样给个进度条
+        setState(() => _refreshing = true);
+        try {
+          await _library.setEpisodeOrder(series, order);
+          messenger.showSnackBar(SnackBar(content: Text(l.detailOrderChanged)));
         } on Object catch (_) {
           messenger
               .showSnackBar(SnackBar(content: Text(l.detailRefreshFailed)));

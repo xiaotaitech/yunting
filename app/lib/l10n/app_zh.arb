@@ -182,6 +182,34 @@
   "detailMenuDownload": "下载本书",
   "detailMenuClear": "清理离线缓存",
   "detailMenuRemove": "移出书架",
+  "detailMenuOrderByName": "按名称排序",
+  "detailMenuOrderByTime": "按时间排序",
+  "detailOrderChanged": "已重新排序",
+  "detailSyncedOn": "{month}月{day}日同步",
+  "@detailSyncedOn": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "detailSyncedOnYear": "{year}年{month}月{day}日同步",
+  "@detailSyncedOnYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "detailRefreshed": "章节已刷新",
   "detailRefreshFailed": "刷新失败，请稍后重试",
   "detailDownloadQueued": "已加入下载队列（{count} {unit}）",
