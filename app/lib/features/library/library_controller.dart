@@ -101,6 +101,10 @@ class LibraryController extends _$LibraryController {
     await ref.read(libraryRepositoryProvider).reorder(series, ordered);
   }
 
+  Future<void> setEpisodeOrder(Series series, EpisodeOrder order) async {
+    await ref.read(libraryRepositoryProvider).setEpisodeOrder(series, order);
+  }
+
   /// 移出书架：连同离线缓存一起清掉，网盘原文件一个字节不动。
   Future<void> remove(Series series) async {
     await ref.read(downloadManagerProvider).clearSeriesCache(series.id);

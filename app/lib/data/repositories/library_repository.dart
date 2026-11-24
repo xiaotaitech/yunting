@@ -385,6 +385,19 @@ class LibraryRepository {
     );
   }
 
+  /// 选章节排序方式（add-episode-time-order）：清掉手动顺序，按新方式整本重排。
+  /// 重排后书的当前章节与历史由 replaceEpisodes 按文件跟过去。
+  Future<void> setEpisodeOrder(Series series, EpisodeOrder order) async {
+    final updated = series.copyWith(
+      episodeOrder: order,
+      orderEditedByUser: false,
+      updatedAt: DateTime.now(),
+      updatedByDevice: await _deviceId(),
+    );
+    await _dao.upsertSeries(updated);
+    await refresh(updated);
+  }
+
   /// 撤销移出：把软删除的那一行恢复。时间戳记成现在，同步时它比「删除」新，
   /// 别的设备也会跟着恢复（记录粒度 LWW）。
   Future<void> restore(Series series) async {

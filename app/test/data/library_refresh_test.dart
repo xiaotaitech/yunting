@@ -147,5 +147,32 @@ void main() {
       final eps = await db.seriesDao.episodesOf(s.id);
       expect(eps.every((e) => e.syncedAt != null), isTrue);
     });
+
+    test('切换排序方式：覆盖手动顺序，进度仍在同一个文件上', () async {
+      files = [at('甲', 30), at('乙', 10), at('丙', 20)];
+      final s = await library.claimFolder('local:/Music/书');
+      // 认领后按码位是 丙 乙 甲；手动拖成 甲 丙 乙，听到甲（第 0 个）
+      final eps = await db.seriesDao.episodesOf(s.id);
+      await library.reorder(s, [eps[2], eps[0], eps[1]]);
+      expect(await titles(s.id), ['甲', '丙', '乙']);
+      await db.seriesDao.updateProgress(
+        seriesId: s.id,
+        episodeIndex: 0,
+        positionMs: 5000,
+        deviceId: 'dev',
+      );
+
+      await library.setEpisodeOrder(
+        (await db.seriesDao.seriesById(s.id))!,
+        EpisodeOrder.time,
+      );
+
+      final book = (await db.seriesDao.seriesById(s.id))!;
+      expect(book.episodeOrder, EpisodeOrder.time);
+      expect(book.orderEditedByUser, isFalse);
+      expect(await titles(s.id), ['乙', '丙', '甲']);
+      expect(book.currentEpisodeIndex, 2);
+      expect(book.currentPositionMs, 5000);
+    });
   });
 }
