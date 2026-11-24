@@ -29,6 +29,16 @@ enum MediaKind {
       values.firstWhere((k) => k.name == raw, orElse: () => audio);
 }
 
+/// 一本书的章节怎么排（add-episode-time-order）。
+/// name：自然序（track 优先）；time：按上传时间从旧到新。
+enum EpisodeOrder {
+  name,
+  time;
+
+  static EpisodeOrder parse(String? raw) =>
+      values.firstWhere((k) => k.name == raw, orElse: () => name);
+}
+
 /// 存储里按 index 存整数，顺序不能动。
 enum CacheState { none, queued, downloading, cached, failed }
 
@@ -53,6 +63,12 @@ abstract class Episode with _$Episode {
     @Default(CacheState.none) CacheState cacheState,
     String? localPath,
     @Default(0) int downloadedBytes,
+
+    /// 文件最初上传进网盘的时间。按时间排序用它。
+    DateTime? createdAt,
+
+    /// 文件同步到网盘的时间。界面显示「M月D日同步」。
+    DateTime? syncedAt,
   }) = _Episode;
 
   const Episode._();
@@ -89,6 +105,9 @@ abstract class Series with _$Series {
     @Default(false) bool titleEditedByUser,
     @Default(false) bool authorEditedByUser,
     @Default(false) bool orderEditedByUser,
+
+    /// 章节排序方式。选它会清掉 orderEditedByUser 并重排。
+    @Default(EpisodeOrder.name) EpisodeOrder episodeOrder,
     DateTime? lastPlayedAt,
 
     /// 同步时的 LWW 合并依据（listening-progress 规格）。

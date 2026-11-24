@@ -47,7 +47,7 @@
 - 本机数据源只有修改时间：`serverCtime` 与 `serverMtime` 都取它。
 - 演示数据源给每个文件造一个递增的时间，演示模式下也能看到效果。
 - `Episode` 加 `createdAt`、`syncedAt`（可空，`DateTime`）；`_buildEpisodes` 和手动排序下的追加分支都填上。
-- 迁移 v4 → v5：`chapters` 加 `created_at`、`synced_at`（可空整数，秒），`books` 加 `episode_order`（默认 `'name'`）。老行时间为空，下一次刷新这本书时由 `replaceEpisodes` 整批写入。
+- 迁移 v4 → v5：`chapters` 加 `created_at`、`synced_at`（可空整数，毫秒，沿用库里时间列的约定），`books` 加 `episode_order`（默认 `'name'`）。老行时间为空，下一次刷新这本书时由 `replaceEpisodes` 整批写入。
 
 ## Risks / Trade-offs
 

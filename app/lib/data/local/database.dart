@@ -49,6 +49,9 @@ class Books extends Table {
   /// v3：合集类型（SeriesKind.name）。老数据全部是有声书。
   TextColumn get kind => text().withDefault(const Constant('audiobook'))();
 
+  /// v5：章节排序方式（EpisodeOrder.name）。
+  TextColumn get episodeOrder => text().withDefault(const Constant('name'))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -75,6 +78,10 @@ class Chapters extends Table {
 
   /// v3：媒体类型（MediaKind.name）。老数据全部是音频。
   TextColumn get mediaKind => text().withDefault(const Constant('audio'))();
+
+  /// v5：网盘上传时间与同步时间（毫秒）。老数据为空，刷新这本书时补上。
+  IntColumn get createdAt => integer().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -145,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(_openFile());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -163,6 +170,12 @@ class AppDatabase extends _$AppDatabase {
           }
           // v3 -> v4：网盘目录缓存。
           if (from < 4) await m.createTable(driveCache);
+          // v4 -> v5：章节的网盘时间、书的章节排序方式。
+          if (from < 5) {
+            await m.addColumn(chapters, chapters.createdAt);
+            await m.addColumn(chapters, chapters.syncedAt);
+            await m.addColumn(books, books.episodeOrder);
+          }
         },
         // 级联删除（删书连带删章节）依赖它；SQLite 默认是关的，每次连接都要开。
         beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),

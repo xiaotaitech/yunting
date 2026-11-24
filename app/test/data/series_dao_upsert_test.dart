@@ -184,4 +184,19 @@ void main() {
     expect((await dao.seriesByFolder('/有声书/三体'))!.id, 'book-1');
     expect((await dao.shelf()).map((b) => b.id), contains('book-1'));
   });
+
+  test('章节的网盘时间与书的排序方式能原样读回', () async {
+    final t1 = DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000);
+    final t2 = DateTime.fromMillisecondsSinceEpoch(1700086400 * 1000);
+    await dao.replaceEpisodes('book-1', [
+      makeChapters().first.copyWith(createdAt: t1, syncedAt: t2),
+    ]);
+    await dao
+        .upsertSeries(makeBook().copyWith(episodeOrder: EpisodeOrder.time));
+
+    final ep = (await dao.episodesOf('book-1')).single;
+    expect(ep.createdAt, t1);
+    expect(ep.syncedAt, t2);
+    expect((await dao.seriesById('book-1'))!.episodeOrder, EpisodeOrder.time);
+  });
 }

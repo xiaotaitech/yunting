@@ -285,6 +285,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         titleEditedByUser: r.titleEdited,
         authorEditedByUser: r.authorEdited,
         orderEditedByUser: r.orderEdited,
+        episodeOrder: EpisodeOrder.parse(r.episodeOrder),
         addedAt: DateTime.fromMillisecondsSinceEpoch(r.addedAt),
         updatedAt: DateTime.fromMillisecondsSinceEpoch(r.updatedAt),
         lastPlayedAt: r.lastPlayedAt == null
@@ -309,6 +310,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         titleEdited: Value(s.titleEditedByUser),
         authorEdited: Value(s.authorEditedByUser),
         orderEdited: Value(s.orderEditedByUser),
+        episodeOrder: Value(s.episodeOrder.name),
         addedAt: s.addedAt.millisecondsSinceEpoch,
         updatedAt: s.updatedAt.millisecondsSinceEpoch,
         lastPlayedAt: Value(s.lastPlayedAt?.millisecondsSinceEpoch),
@@ -331,7 +333,12 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         cacheState: CacheState.values[r.cacheState],
         localPath: r.localPath,
         downloadedBytes: r.downloadedBytes,
+        createdAt: _time(r.createdAt),
+        syncedAt: _time(r.syncedAt),
       );
+
+  static DateTime? _time(int? ms) =>
+      ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
 
   static ChaptersCompanion _fromEpisode(Episode e) => ChaptersCompanion.insert(
         id: e.id,
@@ -348,5 +355,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         cacheState: Value(e.cacheState.index),
         localPath: Value(e.localPath),
         downloadedBytes: Value(e.downloadedBytes),
+        createdAt: Value(e.createdAt?.millisecondsSinceEpoch),
+        syncedAt: Value(e.syncedAt?.millisecondsSinceEpoch),
       );
 }

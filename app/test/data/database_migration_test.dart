@@ -146,7 +146,7 @@ void main() {
   tearDown(() => dir.delete(recursive: true));
 
   for (final from in [1, 2]) {
-    group('v$from → v4', () {
+    group('v$from → v5', () {
       setUp(() => createLegacy(from));
 
       test('书、断点、手动排序标记原样保留，类型落成有声书', () async {
@@ -161,6 +161,7 @@ void main() {
         expect(s.lastPlayedAt, DateTime.fromMillisecondsSinceEpoch(1900));
         expect(s.updatedByDevice, 'dev-a');
         expect(s.kind, SeriesKind.audiobook);
+        expect(s.episodeOrder, EpisodeOrder.name);
         await db.close();
       });
 
@@ -172,6 +173,9 @@ void main() {
         expect(eps.single.localPath, '/data/cache/ch7.mp3');
         expect(eps.single.downloadedBytes, 46400000);
         expect(eps.single.mediaKind, MediaKind.audio);
+        // 老章节没有网盘时间，下次刷新这本书时补上
+        expect(eps.single.createdAt, isNull);
+        expect(eps.single.syncedAt, isNull);
         await db.close();
       });
 
@@ -224,11 +228,11 @@ void main() {
     });
   }
 
-  test('user_version 升到 4', () async {
+  test('user_version 升到 5', () async {
     createLegacy(2);
     await openAndClose();
     final db = sqlite3.open(dbPath);
-    expect(db.userVersion, 4);
+    expect(db.userVersion, 5);
     db.close();
   });
 }
