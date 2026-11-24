@@ -13,10 +13,13 @@ import 'package:yun_audiobook/playback/sleep_timer.dart';
 abstract interface class PlaybackSink {
   /// 进度上报（约 5 秒一次，以及暂停、切章、播完时各一次）。
   /// [episodeFinished] 表示这一集自然播完；[finished] 表示整个合集播完。
+  /// [episodeFsId] 是这一集的文件：播放中书架刷新会让序号错位，
+  /// 落库时以文件为准，[episodeIndex] 只在找不到文件时兜底。
   Future<void> progress({
     required String seriesId,
     required int episodeIndex,
     required int positionMs,
+    String? episodeFsId,
     bool? finished,
     bool episodeFinished = false,
   });
@@ -486,6 +489,7 @@ class PlaybackSession {
     await _sink.progress(
       seriesId: series.id,
       episodeIndex: _state.index,
+      episodeFsId: _state.episode?.fsId,
       positionMs: _engine.current.position.inMilliseconds,
       episodeFinished: true,
     );
@@ -506,6 +510,7 @@ class PlaybackSession {
     await _sink.progress(
       seriesId: series.id,
       episodeIndex: _state.index,
+      episodeFsId: _state.episode?.fsId,
       positionMs: 0,
       finished: true,
     );
@@ -610,6 +615,7 @@ class PlaybackSession {
     await _sink.progress(
       seriesId: series.id,
       episodeIndex: _state.index,
+      episodeFsId: _state.episode?.fsId,
       positionMs: _engine.current.position.inMilliseconds,
     );
   }

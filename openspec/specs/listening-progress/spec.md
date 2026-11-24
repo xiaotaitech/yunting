@@ -22,3 +22,14 @@ TBD - created by archiving change add-netdisk-audiobook-mvp. Update Purpose afte
 - **WHEN** 用户打开一本已标记「已听完」的书并点击播放
 - **THEN** 系统从第一章开头开始播放并清除「已听完」标记
 
+### Requirement: 章节重排后进度与历史跟着文件走
+书架刷新使章节重新排序（例如网盘里按名字插进新的一期）时，书的当前章节与播放历史 MUST 按文件跟到新位置，MUST NOT 停在原来的序号上。
+
+#### Scenario: 前面插进新章节后续听
+- **WHEN** 用户听到某章时，网盘里新增的文件排在它前面，书架随后刷新
+- **THEN** 续听仍从这一章的断点开始，而不是落到同一序号上的另一章
+
+#### Scenario: 刷新后继续听同一章
+- **WHEN** 刷新前后用户都在听同一章
+- **THEN** 「最近收听」里这一章仍只有一条记录
+

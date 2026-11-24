@@ -121,6 +121,16 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
         ..where((c) => c.bookId.equals(seriesId))
         ..orderBy([(c) => OrderingTerm.asc(c.orderIndex)]);
 
+  /// 某个文件现在排在第几个；不在这本书里时为 null。
+  Future<int?> indexOfFile(String seriesId, String fsId) async =>
+      (await (select(chapters)
+                ..where(
+                  (c) => c.bookId.equals(seriesId) & c.fsId.equals(fsId),
+                )
+                ..limit(1))
+              .getSingleOrNull())
+          ?.orderIndex;
+
   Future<List<Episode>> episodesOf(String seriesId) async =>
       (await _episodesQuery(seriesId).get()).map(_toEpisode).toList();
 
@@ -152,9 +162,46 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> with _$SeriesDaoMixin {
             ),
           );
         }
+        // 章节 id 与序号按位置生成，重排后同一个文件换了位置。
+        // 书的当前章节和播放历史都按文件（fsId）跟过去，
+        // 否则续听会落到别的章上，历史也会把同一章记成新的一条。
+        final newByFsId = {for (final e in episodes) e.fsId: e};
+        final book = await (select(books)..where((b) => b.id.equals(seriesId)))
+            .getSingleOrNull();
+        final oldCurrent = book == null
+            ? null
+            : existing
+                .where((r) => r.orderIndex == book.currentChapterIndex)
+                .firstOrNull;
+        final newCurrent =
+            oldCurrent == null ? null : newByFsId[oldCurrent.fsId];
         await (update(books)..where((b) => b.id.equals(seriesId))).write(
-          BooksCompanion(chapterCount: Value(episodes.length)),
+          BooksCompanion(
+            chapterCount: Value(episodes.length),
+            currentChapterIndex: newCurrent == null
+                ? const Value.absent()
+                : Value(newCurrent.orderIndex),
+          ),
         );
+
+        final fsIdByOldId = {for (final r in existing) r.id: r.fsId};
+        final history = attachedDatabase.playHistory;
+        final rows = await (select(history)
+              ..where((h) => h.bookId.equals(seriesId)))
+            .get();
+        for (final h in rows) {
+          final moved = newByFsId[fsIdByOldId[h.chapterId]];
+          if (moved == null ||
+              (moved.id == h.chapterId && moved.orderIndex == h.chapterIndex)) {
+            continue;
+          }
+          await (update(history)..where((x) => x.id.equals(h.id))).write(
+            PlayHistoryCompanion(
+              chapterId: Value(moved.id),
+              chapterIndex: Value(moved.orderIndex),
+            ),
+          );
+        }
       });
 
   /// 记下某条目的真实时长。

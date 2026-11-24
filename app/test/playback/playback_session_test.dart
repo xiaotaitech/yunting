@@ -281,11 +281,11 @@ void main() {
         async.flushMicrotasks();
         engine.complete();
         async.flushMicrotasks();
-        expect(
-          sink.progress_
-              .firstWhere((p) => p['episodeFinished'] == true)['index'],
-          0,
-        );
+        final done =
+            sink.progress_.firstWhere((p) => p['episodeFinished'] == true);
+        expect(done['index'], 0);
+        // 带上文件，落库时序号错位也能找对章
+        expect(done['fsId'], episodes()[0].fsId);
         expect(session.current.index, 1);
         expect(engine.loads.last.at, Duration.zero);
       });

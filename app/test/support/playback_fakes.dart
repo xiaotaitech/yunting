@@ -135,12 +135,14 @@ class RecordingSink implements PlaybackSink {
     required String seriesId,
     required int episodeIndex,
     required int positionMs,
+    String? episodeFsId,
     bool? finished,
     bool episodeFinished = false,
   }) async =>
       progress_.add({
         'series': seriesId,
         'index': episodeIndex,
+        'fsId': episodeFsId,
         'pos': positionMs,
         'finished': finished,
         'episodeFinished': episodeFinished,

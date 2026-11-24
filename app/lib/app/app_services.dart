@@ -180,12 +180,18 @@ class _DatabasePlaybackSink implements PlaybackSink {
     required String seriesId,
     required int episodeIndex,
     required int positionMs,
+    String? episodeFsId,
     bool? finished,
     bool episodeFinished = false,
   }) async {
+    // 会话里的序号可能是书架刷新前的，以文件当前所在的位置为准
+    final index = (episodeFsId == null
+            ? null
+            : await database.seriesDao.indexOfFile(seriesId, episodeFsId)) ??
+        episodeIndex;
     await database.seriesDao.updateProgress(
       seriesId: seriesId,
-      episodeIndex: episodeIndex,
+      episodeIndex: index,
       positionMs: positionMs,
       deviceId: await auth.deviceId(),
       finished: finished,
@@ -194,7 +200,7 @@ class _DatabasePlaybackSink implements PlaybackSink {
     // 不会每次上报插一行。
     await database.historyDao.record(
       seriesId: seriesId,
-      episodeIndex: episodeIndex,
+      episodeIndex: index,
       positionMs: positionMs,
       episodeFinished: episodeFinished,
     );
