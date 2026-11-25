@@ -1,0 +1,10 @@
+{
+  "version": "0.7.1",
+  "notes": "## 云听书 0.7.1\n\n- 章节可以按时间排序：书详情页右上角菜单选「按时间排序」，最早的一期在上、新同步来的一期排在最后，听完一期接着往新的一期放，适合每周更新的书；每本书单独设置\n- 每一章下面显示同步到网盘的日期，比如「11月21日同步」；之前加进书架的书点一次「刷新章节」就会显示\n- 修复：网盘里新增一期后，「最近收听」里同一章会出现两条，续听也可能接到别的章节上\n\n下载 yunting.apk 安装；已安装的用户可在「我的 → 检查更新」直接更新。\n",
+  "page": "https://github.com/xiaotaitech/yunting/releases/tag/v0.7.1",
+  "apk": [
+    "https://cdn.jsdelivr.net/gh/xiaotaitech/yunting@2e75ecc7ec5343b96b5f56e431461563012de9ad/yunting.apk",
+    "https://fastly.jsdelivr.net/gh/xiaotaitech/yunting@2e75ecc7ec5343b96b5f56e431461563012de9ad/yunting.apk",
+    "https://github.com/xiaotaitech/yunting/releases/download/v0.7.1/yunting.apk"
+  ]
+}
